@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { q, one } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { CATEGORIES, CONDITIONS, label, date, specLine } from '@/lib/labels';
+import { date } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
-import { requestIntro } from '../../actions';
+import { requestIntro } from '@/app/actions';
+import { Specs, Score, cat } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +14,6 @@ type Req = { id: string; buyer_id: string; category: string; voltage_v: number; 
 type M = { id: string; score: number; gaps: Gap[]; oem: string; model: string | null; voltage_v: number; amps: number;
   kaic: number | null; enclosure: string | null; condition: string; quantity: number; location_state: string;
   available_date: string; deal_id: string | null; seller_verified: boolean; listing_status: string };
-
-const tone = (s: number) => (s >= 80 ? 'hi' : s >= 60 ? 'mid' : 'lo');
 
 export default async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser('buyer');
@@ -31,26 +30,33 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
      where m.request_id = $1 and l.status <> 'withdrawn' order by m.score desc, l.available_date`, [id]);
   return (
     <>
-      <Link href="/requests" className="small">← My requests</Link>
-      <h1>{label(CATEGORIES, r.category)} · qty {r.quantity}</h1>
-      <p className="lead">{specLine(r)} · site {r.site_state} · need by {date(r.need_by)}
-        {r.acceptable_oems.length > 0 && <> · OEMs: {r.acceptable_oems.join(', ')}</>}</p>
-      <h2>{matches.length} matching {matches.length === 1 ? 'listing' : 'listings'}</h2>
-      {matches.length === 0 && <p className="muted">No matches yet. We will notify you when matching gear is listed.</p>}
+      <Link href="/requests" className="back">← My requests</Link>
+      <div className="page-head">
+        <div>
+          <span className="eyebrow">Request · need by {date(r.need_by)}</span>
+          <h1>{cat(r.category)} for a site in {r.site_state}</h1>
+          <Specs x={r} extra={r.acceptable_oems.length ? [['OEMs', r.acceptable_oems.join(', ')]] : undefined} />
+        </div>
+      </div>
+      <h2 style={{ marginTop: 0 }}>{matches.length} matching {matches.length === 1 ? 'listing' : 'listings'}, best fit first</h2>
+      {matches.length === 0 && <div className="empty">No matches yet. You will get a notification when matching gear is listed.</div>}
       {matches.map(m => (
         <div key={m.id} className="card">
-          <div className="row">
-            <div className={`score ${tone(m.score)}`}>{m.score}</div>
-            <div style={{ flex: 1 }}>
-              <strong>{m.oem} {m.model ?? ''}</strong>{' '}
-              {m.seller_verified && <span className="pill on">verified seller</span>}{' '}
-              {m.listing_status !== 'active' && <span className="pill">{m.listing_status.replace('_', ' ')}</span>}
-              <div className="muted small">{specLine(m)} · {label(CONDITIONS, m.condition)} · qty {m.quantity} · ships from {m.location_state} · available {date(m.available_date)}</div>
+          <div className="row top-align">
+            <Score value={m.score} />
+            <div className="grow">
+              <div className="row" style={{ justifyContent: 'flex-start', gap: 10 }}>
+                <span className="title">{m.oem} {m.model ?? ''}</span>
+                {m.seller_verified && <span className="pill on">Verified seller</span>}
+                {m.listing_status !== 'active' && <span className="pill">{m.listing_status.replace('_', ' ')}</span>}
+              </div>
+              <div className="meta">Ships from {m.location_state} · available {date(m.available_date)}</div>
+              <Specs x={m} />
               <ul className="gaps">{m.gaps.map((g, i) => <li key={i} className={g.severity}>{g.text}</li>)}</ul>
             </div>
             <div>
-              {m.deal_id ? <Link href={`/deals/${m.deal_id}`}><button className="secondary">Open deal room</button></Link>
-                : <form action={requestIntro}><input type="hidden" name="match_id" value={m.id} /><button>Request intro</button></form>}
+              {m.deal_id ? <Link href={`/deals/${m.deal_id}`} className="btn ghost">Open deal room</Link>
+                : <form action={requestIntro}><input type="hidden" name="match_id" value={m.id} /><button className="primary">Request intro</button></form>}
             </div>
           </div>
         </div>

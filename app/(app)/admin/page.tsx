@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { CATEGORIES, STAGE_LABEL, label, money, date, specLine } from '@/lib/labels';
-import { verifyUser } from '../actions';
+import { STAGE_LABEL, money, date, specLine } from '@/lib/labels';
+import { verifyUser } from '@/app/actions';
+import { cat } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,24 +31,29 @@ export default async function Admin() {
   ];
   return (
     <>
-      <h1>Ops</h1>
-      <p className="lead">Pipeline across both sides of the market.</p>
-      <div className="fields" style={{ marginBottom: 8 }}>
-        {stats.map(([k, v]) => <div key={k} className="card"><div className="muted small">{k}</div><div className="stat">{v}</div></div>)}
+      <div className="page-head">
+        <div>
+          <span className="eyebrow">Ops</span>
+          <h1>Marketplace pipeline</h1>
+          <p className="lead">Both sides of the market, soonest deadlines first.</p>
+        </div>
+      </div>
+      <div className="stats">
+        {stats.map(([k, v]) => <div key={k} className="stat-card"><div className="k">{k}</div><div className="v">{v}</div></div>)}
       </div>
       <h2>Deals</h2>
       <div className="table-wrap"><table><thead><tr><th>Equipment</th><th>Buyer</th><th>Seller</th><th>Stage</th><th>Offer</th><th>Updated</th></tr></thead><tbody>
-        {deals.map(d => <tr key={d.id}><td><Link href={`/deals/${d.id}`}>{d.oem} {label(CATEGORIES, d.category)}</Link></td><td>{d.buyer}</td><td>{d.seller}</td><td>{STAGE_LABEL[d.stage]}</td><td>{money(d.offer_price)}</td><td>{date(d.updated_at)}</td></tr>)}
+        {deals.map(d => <tr key={d.id}><td><Link href={`/deals/${d.id}`}>{d.oem} {cat(d.category)}</Link></td><td>{d.buyer}</td><td>{d.seller}</td><td><span className="pill on">{STAGE_LABEL[d.stage]}</span></td><td className="num">{money(d.offer_price)}</td><td className="num">{date(d.updated_at)}</td></tr>)}
         {deals.length === 0 && <tr><td colSpan={6} className="muted">No deals yet</td></tr>}
       </tbody></table></div>
       <h2>Open requests by need-by date</h2>
-      <div className="table-wrap"><table><thead><tr><th>Need by</th><th>Buyer</th><th>Spec</th><th>Matches</th><th>Best fit</th></tr></thead><tbody>
-        {reqs.map(r => <tr key={r.id}><td>{date(r.need_by)}</td><td>{r.company}</td><td>{label(CATEGORIES, r.category)} · {specLine(r)}</td><td>{r.matches}</td><td>{r.best ?? '—'}</td></tr>)}
+      <div className="table-wrap"><table><thead><tr><th>Need by</th><th>Buyer</th><th>Category</th><th>Spec</th><th>Matches</th><th>Best fit</th></tr></thead><tbody>
+        {reqs.map(r => <tr key={r.id}><td className="num">{date(r.need_by)}</td><td>{r.company}</td><td>{cat(r.category)}</td><td className="num">{specLine(r)}</td><td className="num">{r.matches}</td><td className="num">{r.best ?? '—'}</td></tr>)}
       </tbody></table></div>
       <h2>Accounts to verify</h2>
       <div className="table-wrap"><table><thead><tr><th>Name</th><th>Company</th><th>Role</th><th>Email</th><th></th></tr></thead><tbody>
-        {users.map(x => <tr key={x.id}><td>{x.name}</td><td>{x.company}</td><td>{x.role}</td><td>{x.email}</td>
-          <td><form action={verifyUser}><input type="hidden" name="user_id" value={x.id} /><button className="secondary">Verify</button></form></td></tr>)}
+        {users.map(x => <tr key={x.id}><td>{x.name}</td><td>{x.company}</td><td><span className="pill">{x.role}</span></td><td className="num">{x.email}</td>
+          <td className="right"><form action={verifyUser}><input type="hidden" name="user_id" value={x.id} /><button className="secondary">Verify</button></form></td></tr>)}
         {users.length === 0 && <tr><td colSpan={5} className="muted">Everyone is verified</td></tr>}
       </tbody></table></div>
     </>
