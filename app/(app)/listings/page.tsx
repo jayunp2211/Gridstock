@@ -3,6 +3,7 @@ import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/labels';
 import { syncListing } from '@/lib/matching';
+import { taken } from '@/lib/units';
 import { Spec, State, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,7 @@ type Row = {
   id: string; category: string; oem: string; model: string | null; voltage_v: number; secondary_v: number | null; amps: number | null;
   capacity: number | null; kaic: number | null;
   enclosure: string | null; condition: string; quantity: number; location_state: string; available_date: string;
-  asking_price: number | null; status: string; matches: number; deals: number;
+  asking_price: number | null; status: string; matches: number; deals: number; open_units: number;
 };
 
 export default async function Listings() {
@@ -19,7 +20,7 @@ export default async function Listings() {
   const mine = await q<{ id: string }>(`select id from listings where seller_id = $1 and status = 'active'`, [u.id]);
   for (const l of mine) await syncListing(l.id);
   const rows = await q<Row>(
-    `select l.*,
+    `select l.*, l.quantity - ${taken('l')} as open_units,
             (select count(*)::int from matches m join requests r on r.id = m.request_id where m.listing_id = l.id and r.status = 'open') as matches,
             (select count(*)::int from deals d join matches m on m.id = d.match_id where m.listing_id = l.id and d.stage <> 'lost') as deals
      from listings l where l.seller_id = $1 order by l.created_at desc`, [u.id]);
@@ -57,7 +58,10 @@ export default async function Listings() {
                     {l.matches === 0 && l.deals === 0 ? <span className="soft">None yet</span> : <>{l.matches} {l.matches === 1 ? 'request' : 'requests'}</>}
                     {l.deals > 0 && <div className="under"><Link href="/deals">{l.deals} {l.deals === 1 ? 'deal' : 'deals'}</Link></div>}
                   </td>
-                  <td><State value={l.status} /></td>
+                  <td>
+                    <State value={l.status} />
+                    {l.status === 'active' && l.open_units < l.quantity && <div className="under">{Math.max(0, l.open_units)} of {l.quantity} open</div>}
+                  </td>
                 </tr>
               ))}
             </tbody>

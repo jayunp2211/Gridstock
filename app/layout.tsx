@@ -23,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="frame nav">
           <Link href="/" className="wordmark">Gridstock</Link>
           <nav aria-label="Main">
-            {!u && <><Link href="/#available">Gear</Link><Link href="/#wanted">Wanted</Link><Link href="/#how">How a deal runs</Link></>}
+            {!u && <><Link href="/#available">Gear</Link><Link href="/#wanted">Wanted</Link><Link href="/#how">How a deal runs</Link><Link href="/about">About</Link></>}
             {u?.role === 'seller' && <><Link href="/listings">My listings</Link><Link href="/listings/new">List gear</Link></>}
             {u?.role === 'buyer' && <><Link href="/requests">My requests</Link><Link href="/requests/new">Post a need</Link></>}
             {u && <Link href="/deals">Deals</Link>}
@@ -43,6 +43,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="meta small">
             <span>A private market for data center power and cooling equipment.</span>
             <span>Sellers and prices stay hidden until both sides sign an NDA.</span>
+            <nav aria-label="About Gridstock">
+              <Link href="/about">About</Link><Link href="/nda">The NDA</Link><Link href="/about#contact">Contact</Link>
+            </nav>
             <span>© 2026 Gridstock</span>
           </div>
           <div className="fit-name"><span className="name" aria-hidden="true">Gridstock</span></div>

@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth';
 import { money, units } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
 import { syncListing } from '@/lib/matching';
+import { filled, sold, taken } from '@/lib/units';
 import { proposeIntro, setListingStatus } from '@/app/actions';
 import { Spec, Fit, Checks, State, Arrow, cat, day } from '@/components/ui';
 
@@ -12,7 +13,9 @@ export const dynamic = 'force-dynamic';
 
 type L = { id: string; seller_id: string; category: string; oem: string; model: string | null; voltage_v: number; secondary_v: number | null;
   amps: number | null; capacity: number | null; kaic: number | null; configuration: string | null; enclosure: string | null; standard: string | null; condition: string; quantity: number; location_state: string;
-  available_date: string; asking_price: number | null; warranty_status: string | null; notes: string | null; status: string };
+  available_date: string; asking_price: number | null; warranty_status: string | null; notes: string | null; status: string;
+  /** Units no accepted deal has taken, and units in deals that have closed. */
+  open_units: number; sold_units: number };
 type M = { id: string; score: number; gaps: Gap[]; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null;
   capacity_min: number | null; kaic_min: number | null;
   enclosure: string | null; quantity: number; site_state: string; need_by: string; request_status: string; deal_id: string | null;
@@ -23,17 +26,19 @@ export default async function ListingDetail({ params, searchParams }: { params: 
   const { id } = await params;
   const { created } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-  const l = await one<L>('select * from listings where id = $1', [id]);
+  const l = await one<L>(`select l.*, l.quantity - ${taken('l')} as open_units, ${sold('l')} as sold_units from listings l where l.id = $1`, [id]);
   if (!l || (l.seller_id !== u.id && u.role !== 'admin')) notFound();
   await syncListing(id);
   // Sellers see the need, never the buyer: no name, company, budget or project notes before the NDA.
   const reqs = await q<M>(
-    `select m.id, m.score, m.gaps, r.category, r.voltage_v, r.secondary_v, r.amps_min, r.capacity_min, r.kaic_min, r.enclosure, r.quantity,
+    `select m.id, m.score, m.gaps, r.category, r.voltage_v, r.secondary_v, r.amps_min, r.capacity_min, r.kaic_min, r.enclosure,
+            case when r.status = 'open' then r.quantity - ${filled('r')} else r.quantity end as quantity,
             r.site_state, r.need_by,
             r.status as request_status, d.id as deal_id, d.stage as deal_stage, b.verified as buyer_verified
      from matches m join requests r on r.id = m.request_id join users b on b.id = r.buyer_id left join deals d on d.match_id = m.id
      where m.listing_id = $1 and (r.status = 'open' or d.id is not null) order by m.score desc, r.need_by`, [id]);
   const each = l.asking_price != null && l.quantity > 1 ? Math.round(l.asking_price / l.quantity) : null;
+  const open = Math.max(0, l.open_units), reserved = l.quantity - open - l.sold_units;
   return (
     <>
       <Link href="/listings" className="back"><Arrow />My listings</Link>
@@ -56,6 +61,21 @@ export default async function ListingDetail({ params, searchParams }: { params: 
 
       <dl className="facts terms">
         <dt>Status</dt><dd><State value={l.status} /></dd>
+        {(l.quantity > 1 || open < l.quantity) && (
+          <>
+            <dt>Units</dt>
+            <dd>
+              {open === l.quantity ? `${units(l.quantity)}, all open to buyers` : `${open} of ${l.quantity} open to buyers`}
+              {open < l.quantity && (
+                <div className="soft small">
+                  {[reserved > 0 ? `${reserved} reserved while ${reserved === 1 ? 'a deal completes' : 'deals complete'}` : null, l.sold_units > 0 ? `${l.sold_units} sold` : null]
+                    .filter(Boolean).join(', ')}.
+                  {' '}An accepted offer takes only the units in that deal.
+                </div>
+              )}
+            </dd>
+          </>
+        )}
         <dt>Asking</dt>
         <dd>
           {l.asking_price == null ? <span className="soft">Not set</span> : <span className="big num">{money(l.asking_price)}</span>}

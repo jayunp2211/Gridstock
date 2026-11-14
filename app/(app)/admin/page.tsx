@@ -10,14 +10,15 @@ export const dynamic = 'force-dynamic';
 export default async function Admin({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {
   await requireUser('admin');
   const { reset } = await searchParams;
-  const [counts] = await q<{ listings: number; requests: number; matches: number; deals: number; closed_value: number | null; waiting: number }>(
+  const [counts] = await q<{ listings: number; requests: number; matches: number; deals: number; closed_value: number | null; waiting: number; messages: number }>(
     `select (select count(*)::int from listings where status = 'active') as listings,
             (select count(*)::int from requests where status = 'open') as requests,
             (select count(*)::int from matches m join listings l on l.id = m.listing_id join requests r on r.id = m.request_id
               where l.status = 'active' and r.status = 'open') as matches,
             (select count(*)::int from deals where stage not in ('closed','lost')) as deals,
             (select sum(offer_price)::bigint from deals where stage = 'closed') as closed_value,
-            (select count(*)::int from users where email not like '%.test' and not verified) as waiting`);
+            (select count(*)::int from users where email not like '%.test' and not verified) as waiting,
+            (select count(*)::int from contact_messages) as messages`);
   const deals = await q<{ id: string; stage: string; offer_price: number | null; oem: string; category: string; buyer: string; seller: string; updated_at: string }>(
     `select d.id, d.stage, d.offer_price, l.oem, l.category, b.company as buyer, s.company as seller, d.updated_at
      from deals d join matches m on m.id = d.match_id join listings l on l.id = m.listing_id join requests r on r.id = m.request_id
@@ -88,6 +89,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         {counts.waiting === 0 ? 'No company has asked for access yet.' : `${counts.waiting} ${counts.waiting === 1 ? 'company has' : 'companies have'} asked for access.`}{' '}
         Their names and email addresses are kept out of the demo. Read them in the database until email sign-in is in place.
       </p>
+      <p className="lede soft">
+        {counts.messages === 0 ? 'No message has come in through the contact form yet.' : `${counts.messages} ${counts.messages === 1 ? 'message has' : 'messages have'} come in through the contact form on the about page.`}{' '}
+        They are kept out of the demo too. Read them in the contact_messages table.
+      </p>
       <div className="scroll">
         <table className="data">
           <thead><tr><th>Sample account</th><th>Company</th><th>Role</th><th>Email</th><th><span className="vh">Action</span></th></tr></thead>
@@ -105,7 +110,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
       <section className="panel ops">
         <h3>Reset the demo</h3>
-        <p className="soft">Puts the sample companies, listings and requests back to their starting state, with fresh dates. Deals, offers and messages made in the demo are cleared. Real accounts are not touched.</p>
+        <p className="soft">Puts the sample companies, listings and requests back to their starting state, with fresh dates. Deals, offers, messages and documents made in the demo are cleared. Real accounts are not touched.</p>
         <form action={resetDemo}><button className="line">Reset demo data</button></form>
       </section>
     </>
