@@ -171,6 +171,12 @@ body:has(main.app) .colophon { padding-bottom: 28px; }
 .nda-side ul { display: grid; gap: 4px; }
 .panel.ops { margin-top: 56px; }
 .offer { margin-top: 20px; }
+.accept { margin-top: 20px; }
+.accept + .offer { margin-top: 8px; }
+.accept button { width: 100%; justify-content: space-between; }
+.offer-error { margin: 20px 0 0; }
+.offer-next { margin-top: 18px; max-width: 34em; }
+.facts .state { margin-top: 2px; }
 .reply { margin-top: 22px; max-width: 720px; }
 .pair .checks { margin-top: 22px; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 56px var(--gutter); }

@@ -4,13 +4,14 @@ import { q, one } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { STAGES, STAGE_LABEL, money } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
-import { acceptNda, makeOffer, postMessage, setStage } from '@/app/actions';
+import { acceptNda, acceptOffer, makeOffer, postMessage, setStage } from '@/app/actions';
 import { Spec, Fit, Checks, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
 type D = {
   id: string; stage: string; buyer_nda_at: string | null; seller_nda_at: string | null; offer_price: number | null; fee_pct: string;
+  offer_by: string | null; offer_accepted_at: string | null;
   score: number; gaps: Gap[]; request_id: string; buyer_id: string; seller_id: string;
   category: string; oem: string; model: string | null; voltage_v: number; amps: number; kaic: number | null; enclosure: string | null;
   condition: string; quantity: number; location_state: string; available_date: string; asking_price: number | null;
@@ -22,9 +23,10 @@ type Msg = { id: string; body: string; created_at: string; name: string | null; 
 const stamp = (d: string) =>
   new Date(d).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + ' UTC';
 
-export default async function DealRoom({ params }: { params: Promise<{ id: string }> }) {
+export default async function DealRoom({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ offer?: string }> }) {
   const u = await requireUser();
   const { id } = await params;
+  const { offer: offerError } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const d = await one<D>(
     `select d.*, m.score, m.gaps, m.request_id, r.buyer_id, l.seller_id, l.category, l.oem, l.model, l.voltage_v, l.amps, l.kaic,
@@ -52,6 +54,17 @@ export default async function DealRoom({ params }: { params: Promise<{ id: strin
   const stageIdx = STAGES.indexOf(d.stage as (typeof STAGES)[number]);
   const fee = d.offer_price ? Math.round(d.offer_price * Number(d.fee_pct) / 100) : null;
   const hidden = <span className="soft">Hidden until NDA</span>;
+  // Offers: either party can make one after the NDA; only the side that received it can accept.
+  const party = isBuyer || isSeller;
+  const accepted = !!d.offer_accepted_at;
+  const negotiable = ndaDone && !accepted && ['documents', 'offer'].includes(d.stage);
+  const mine = d.offer_by === u.id;
+  const from = d.offer_by === d.buyer_id ? 'buyer' : d.offer_by === d.seller_id ? 'seller' : null;
+  const canAccept = party && negotiable && d.offer_price != null && from != null && !mine;
+  const offerNote = d.offer_price == null ? null
+    : !negotiable ? (from ? `From the ${from}.` : null)
+    : mine ? `Your offer. Waiting for the ${isBuyer ? 'seller' : 'buyer'} to accept or counter.`
+    : from ? `From the ${from}.${canAccept ? ' Accept it or counter below.' : ''}` : null;
 
   return (
     <>
@@ -103,18 +116,31 @@ export default async function DealRoom({ params }: { params: Promise<{ id: strin
           <h2>Commercials</h2>
           <dl className="facts">
             <dt>Asking</dt><dd className={(reveal || isSeller) && d.asking_price != null ? 'big num' : ''}>{reveal || isSeller ? (d.asking_price == null ? <span className="soft">Not set</span> : money(d.asking_price)) : hidden}</dd>
-            <dt>Offer</dt><dd className={d.offer_price == null ? '' : 'big num'}>{d.offer_price == null ? <span className="soft">None yet</span> : money(d.offer_price)}</dd>
+            {accepted ? (
+              <><dt>Agreed price</dt><dd><span className="big num">{money(d.offer_price)}</span><div className="state live">Accepted {day(d.offer_accepted_at!)}</div></dd></>
+            ) : (
+              <><dt>Offer</dt><dd>{d.offer_price == null ? <span className="soft">None yet</span> : <><span className="big num">{money(d.offer_price)}</span>{offerNote && <div className="soft small">{offerNote}</div>}</>}</dd></>
+            )}
             {fee != null && (isAdmin || isBuyer) && <><dt>Fee</dt><dd className="num">{money(fee)} <span className="soft small">({Number(d.fee_pct)}% at close)</span></dd></>}
             <dt>Warranty</dt><dd>{d.warranty_status ?? <span className="soft">Not stated</span>}</dd>
             {d.notes && reveal && <><dt>Seller notes</dt><dd>{d.notes}</dd></>}
           </dl>
-          {ndaDone && d.stage !== 'closed' && d.stage !== 'lost' && (
-            <form action={makeOffer} className="inline offer">
+          {offerError && <p className="notice offer-error" role="alert">Enter the offer as a whole dollar amount, for example 1,500,000.</p>}
+          {canAccept && (
+            <form action={acceptOffer} className="accept">
               <input type="hidden" name="deal_id" value={d.id} />
-              <input name="offer_price" inputMode="numeric" placeholder="Offer in USD" aria-label="Offer in USD" required />
-              <button>{isSeller ? 'Counter' : 'Make offer'}</button>
+              <input type="hidden" name="offer_price" value={d.offer_price!} />
+              <button className="go">Accept {money(d.offer_price)}<Arrow /></button>
             </form>
           )}
+          {party && negotiable && (
+            <form action={makeOffer} className="inline offer">
+              <input type="hidden" name="deal_id" value={d.id} />
+              <input name="offer_price" inputMode="numeric" placeholder={canAccept ? 'Counter offer in USD' : 'Offer in USD'} aria-label={canAccept ? 'Counter offer in USD' : 'Offer in USD'} required />
+              <button className={canAccept ? 'line' : undefined}>{d.offer_price == null ? 'Make offer' : mine ? 'Change my offer' : 'Counter'}</button>
+            </form>
+          )}
+          {accepted && <p className="soft offer-next">Next step: Gridstock arranges an independent inspection before funds move into escrow.</p>}
         </section>
       </div>
 

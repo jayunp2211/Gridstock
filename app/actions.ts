@@ -71,16 +71,26 @@ export async function createRequest(f: FormData) {
   redirect(`/requests/${row!.id}`);
 }
 
-type DealRow = { id: string; stage: string; buyer_id: string; seller_id: string; listing_id: string; request_id: string };
+type DealRow = {
+  id: string; stage: string; buyer_id: string; seller_id: string; listing_id: string; request_id: string;
+  buyer_nda_at: string | null; seller_nda_at: string | null; offer_price: number | null; offer_by: string | null;
+  offer_accepted_at: string | null;
+};
 
 async function dealFor(dealId: string, userId: string) {
   return one<DealRow>(
-    `select d.id, d.stage, r.buyer_id, l.seller_id, m.listing_id, m.request_id from deals d
+    `select d.id, d.stage, d.buyer_nda_at, d.seller_nda_at, d.offer_price, d.offer_by, d.offer_accepted_at,
+            r.buyer_id, l.seller_id, m.listing_id, m.request_id from deals d
        join matches m on m.id = d.match_id join requests r on r.id = m.request_id join listings l on l.id = m.listing_id
      where d.id = $1 and ($2 in (r.buyer_id, l.seller_id) or exists (select 1 from users where id = $2 and role = 'admin'))`,
     [dealId, userId],
   );
 }
+
+const usd = (n: number) => '$' + n.toLocaleString('en-US');
+/** Offers can be made and answered only by the two parties, after the NDA, and until one is accepted. */
+const negotiable = (d: DealRow) =>
+  !!d.buyer_nda_at && !!d.seller_nda_at && !d.offer_accepted_at && ['documents', 'offer'].includes(d.stage);
 
 export async function requestIntro(f: FormData) {
   const u = await requireUser('buyer');
@@ -121,9 +131,36 @@ export async function makeOffer(f: FormData) {
   const u = await requireUser();
   const d = await dealFor(str(f, 'deal_id'), u.id);
   const price = num(f, 'offer_price');
-  if (!d || price == null || Number.isNaN(price)) return;
-  await q(`update deals set offer_price = $2, stage = case when stage in ('nda','documents') then 'offer' else stage end, updated_at = now() where id = $1`, [d.id, price]);
-  await q(`insert into deal_messages (deal_id, author_id, body) values ($1,$2,$3)`, [d.id, u.id, `Offer: $${price.toLocaleString('en-US')}`]);
+  if (!d || ![d.buyer_id, d.seller_id].includes(u.id) || !negotiable(d)) return;
+  if (price == null || !Number.isInteger(price) || price <= 0 || price > 2_000_000_000) redirect(`/deals/${d.id}?offer=invalid`);
+  await q(`update deals set offer_price = $2, offer_by = $3, stage = 'offer', updated_at = now() where id = $1`, [d.id, price, u.id]);
+  await q(`insert into deal_messages (deal_id, author_id, body) values ($1,$2,$3)`, [d.id, u.id, `Offer: ${usd(price)}`]);
+  const other = u.id === d.buyer_id ? d.seller_id : d.buyer_id;
+  await q(`insert into notifications (user_id, body, link) values ($1,$2,$3)`,
+    [other, `${u.id === d.buyer_id ? 'The buyer' : 'The seller'} offered ${usd(price)}. Accept it or counter.`, `/deals/${d.id}`]);
+  redirect(`/deals/${d.id}`);
+}
+
+export async function acceptOffer(f: FormData) {
+  const u = await requireUser();
+  const d = await dealFor(str(f, 'deal_id'), u.id);
+  if (!d || ![d.buyer_id, d.seller_id].includes(u.id) || !negotiable(d)) return;
+  // Only the side that received the offer can accept it, and only at the price they were shown.
+  if (d.offer_price == null || !d.offer_by || d.offer_by === u.id) return;
+  if (num(f, 'offer_price') !== d.offer_price) return;
+  const done = await one<{ id: string }>(
+    `update deals set offer_accepted_at = now(), stage = 'inspection', updated_at = now()
+     where id = $1 and offer_price = $2 and offer_by = $3 and offer_accepted_at is null returning id`,
+    [d.id, d.offer_price, d.offer_by]);
+  if (!done) return;
+  await q(`update listings set status = 'under_offer' where id = $1 and status = 'active'`, [d.listing_id]);
+  await q(`update requests set status = 'in_deal' where id = $1 and status = 'open'`, [d.request_id]);
+  await q(`insert into deal_messages (deal_id, author_id, body) values ($1,$2,$3)`,
+    [d.id, u.id, `Accepted the offer of ${usd(d.offer_price)}. Next step: independent inspection.`]);
+  await q(`insert into notifications (user_id, body, link) values ($1,$2,$3)`,
+    [d.offer_by, `Your offer of ${usd(d.offer_price)} was accepted. Next step: independent inspection.`, `/deals/${d.id}`]);
+  await q(`insert into notifications (user_id, body, link) select id, $1, $2 from users where role = 'admin'`,
+    [`An offer of ${usd(d.offer_price)} was accepted. Arrange the inspection.`, `/deals/${d.id}`]);
   revalidatePath(`/deals/${d.id}`);
 }
 
@@ -133,7 +170,10 @@ export async function setStage(f: FormData) {
   if (![...STAGES, 'lost'].includes(stage as (typeof STAGES)[number])) return;
   const d = await dealFor(str(f, 'deal_id'), u.id);
   if (!d) return;
-  await q(`update deals set stage = $2, updated_at = now() where id = $1`, [d.id, stage]);
+  // Moving a deal back to an earlier stage reopens the negotiation.
+  await q(`update deals set stage = $2, updated_at = now(),
+             offer_accepted_at = case when $2 in ('nda','documents','offer') then null else offer_accepted_at end
+           where id = $1`, [d.id, stage]);
   if (stage === 'inspection' || stage === 'escrow') {
     await q(`update listings set status = 'under_offer' where id = $1`, [d.listing_id]);
     await q(`update requests set status = 'in_deal' where id = $1`, [d.request_id]);
