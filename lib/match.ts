@@ -114,7 +114,7 @@ export function matchListing(req: Request, lst: Listing): MatchResult {
       if (Math.abs(rated - need) / rated > TAP_RANGE) return wrong;
       pen(10, `Primary is ${volts(lst.voltage_v)}, your system is ${volts(req.voltage_v)}; that is inside a standard tap range, so confirm the taps on the nameplate`);
     } else if (unit) {
-      // A UPS, a chiller or a CDU runs on the supply it was built for.
+      // A UPS, a chiller or a CDU runs on the supply it was built for, and a generator makes one voltage.
       return wrong;
     } else {
       // Switchgear, switchboards and breakers carry a maximum voltage and serve any system below it in the same class.

@@ -4,6 +4,7 @@ export const CATEGORIES: [string, string][] = [
   ['breaker', 'Circuit breaker'],
   ['transformer', 'Transformer'],
   ['ups', 'UPS'],
+  ['generator', 'Generator'],
   ['cdu', 'Coolant distribution unit'],
   ['chiller', 'Chiller'],
 ];
@@ -32,7 +33,7 @@ export const OEMS = ['ABB', 'Eaton', 'GE Vernova', 'Hitachi Energy', 'Mitsubishi
 
 // Switchgear, switchboards and breakers are sized by rated current. These are sized by capacity instead,
 // each in its own unit, and the unit follows from the category.
-const CAPACITY_UNIT: Record<string, string> = { transformer: 'kVA', ups: 'kVA', cdu: 'kW', chiller: 'tons' };
+const CAPACITY_UNIT: Record<string, string> = { transformer: 'kVA', ups: 'kVA', generator: 'kW', cdu: 'kW', chiller: 'tons' };
 export const capacityUnit = (category: string | undefined) =>
   (category && Object.hasOwn(CAPACITY_UNIT, category) ? CAPACITY_UNIT[category] : null);
 
@@ -40,7 +41,7 @@ export const label = (pairs: [string, string][], v: string) => pairs.find(p => p
 // The category as a word inside a sentence, where "LV/MV switchgear" lower-cased would read "lv/mv" and "UPS" would read "ups".
 const NOUN: Record<string, string> = {
   switchgear: 'switchgear', switchboard: 'switchboard', breaker: 'circuit breaker', transformer: 'transformer',
-  ups: 'UPS', cdu: 'coolant distribution unit', chiller: 'chiller',
+  ups: 'UPS', generator: 'generator', cdu: 'coolant distribution unit', chiller: 'chiller',
 };
 export const noun = (category: string) => (Object.hasOwn(NOUN, category) ? NOUN[category] : category);
 export const money = (n: number | null | undefined) => (n == null ? '—' : '$' + Number(n).toLocaleString('en-US'));

@@ -133,6 +133,11 @@ test('cooling and UPS are sized by capacity and need their own supply voltage', 
   const util = matchListing(need, { ...unit, voltage_v: 460 });
   assert.ok(util.ok);
   assert.equal(util.score, 100);
+  // A generator is sized in kW and makes one voltage.
+  const genNeed = { ...need, category: 'generator', capacity_min: 2000 }, gen = { ...unit, category: 'generator', oem: 'Cummins', capacity: 2500 };
+  assert.equal(matchListing(genNeed, gen).ok, true);
+  assert.equal(matchListing(genNeed, { ...gen, voltage_v: 13_800 }).ok, false);
+  assert.equal(matchListing(genNeed, { ...gen, capacity: 1500 }).ok, false);
   // Interrupting rating is not a property of this equipment, so asking for one changes nothing.
   const withKaic = matchListing({ ...need, kaic_min: 65 }, unit);
   assert.ok(withKaic.ok);

@@ -1,7 +1,7 @@
 'use client';
 // The part of the two entry forms that depends on the category. Switchgear, switchboards and breakers
 // are described by voltage, current and interrupting rating. A transformer is described by kVA and two
-// voltages, and a UPS, CDU or chiller by its capacity and supply voltage. Asking a chiller for its amps
+// voltages, and a UPS, generator, CDU or chiller by its capacity and voltage. Asking a chiller for its amps
 // would tell anyone in the trade that the form was not built for them.
 // The server checks the same rules again, so this only decides which fields are on screen.
 import { useState } from 'react';
@@ -13,6 +13,7 @@ const EXAMPLE: Record<string, { model?: string; capacity?: string; enclosure?: s
   breaker: { model: 'Emax 2 E4.2', standard: 'UL 1066' },
   transformer: { model: 'Pad-mount, liquid filled', capacity: '2500', enclosure: 'NEMA 3R', standard: 'IEEE C57.12.34' },
   ups: { capacity: '1000', standard: 'UL 1778' },
+  generator: { capacity: '2500', enclosure: 'Sound attenuated', standard: 'UL 2200' },
   cdu: { model: 'XDU1350', capacity: '1350' },
   chiller: { capacity: '500', standard: 'AHRI 550/590' },
 };
@@ -22,6 +23,7 @@ const CONFIG_HINT: Record<string, string> = {
   breaker: 'Drawout, electronic trip units, cradles included.',
   transformer: 'Delta primary, 480Y/277 V secondary, 5.75% impedance, taps at 2.5% steps, loop feed.',
   ups: 'Double conversion, 480 V in and out, lithium-ion cabinets for five minutes at full load.',
+  generator: 'Diesel, standby rated, EPA Tier 2, 24-hour base tank, paralleling controls.',
   cdu: 'Liquid to liquid, redundant pumps, PG25 on the technology loop.',
   chiller: 'Air cooled, screw compressors, free cooling coils, 60 Hz.',
 };
@@ -65,7 +67,7 @@ export function ListingSpec() {
         {unit ? (
           <div className="fields" key="capacity">
             <label>Capacity ({unit})<input name="capacity" type="number" required min={1} max={500000} step={1} placeholder={eg.capacity} /></label>
-            <Volts name="voltage_v" title={transformer ? 'Primary voltage (V)' : 'Supply voltage (V)'} placeholder={transformer ? '13800' : '480'} />
+            <Volts name="voltage_v" title={transformer ? 'Primary voltage (V)' : category === 'generator' ? 'Output voltage (V)' : 'Supply voltage (V)'} placeholder={transformer ? '13800' : '480'} />
             {transformer && <Volts name="secondary_v" title="Secondary voltage (V)" placeholder="480" hint={false} />}
           </div>
         ) : (
@@ -110,7 +112,7 @@ export function RequestSpec() {
         {unit ? (
           <div className="fields" key="capacity">
             <label>Minimum capacity ({unit})<input name="capacity_min" type="number" required min={1} max={500000} step={1} placeholder={eg.capacity} /></label>
-            <Volts name="voltage_v" title={transformer ? 'Primary voltage (V)' : 'Supply voltage (V)'} placeholder={transformer ? '13800' : '480'} />
+            <Volts name="voltage_v" title={transformer ? 'Primary voltage (V)' : category === 'generator' ? 'Output voltage (V)' : 'Supply voltage (V)'} placeholder={transformer ? '13800' : '480'} />
             {transformer && <Volts name="secondary_v" title="Secondary voltage (V)" placeholder="480" hint={false} />}
           </div>
         ) : (
