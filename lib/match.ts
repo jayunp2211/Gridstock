@@ -1,6 +1,10 @@
 // Spec matching between a buyer request and a seller listing.
 // Pure function: hard requirements filter out a listing entirely;
 // soft mismatches lower the score and are reported as gaps.
+//
+// The score is a first screen on nameplate data, not an engineering review. It never sees
+// price or budget: both stay private until the two sides have signed the NDA.
+import { volts } from './labels.ts';
 
 export type Listing = {
   category: string;
@@ -13,7 +17,6 @@ export type Listing = {
   quantity: number;
   location_state: string;
   available_date: string; // YYYY-MM-DD
-  asking_price: number | null;
 };
 
 export type Request = {
@@ -27,7 +30,6 @@ export type Request = {
   quantity: number;
   site_state: string;
   need_by: string; // YYYY-MM-DD
-  budget_max: number | null;
 };
 
 export type Gap = { severity: 'warn' | 'info'; text: string };
@@ -49,25 +51,63 @@ const REGION_LABEL: Record<string, string> = {
   northeast: 'Northeast', southeast: 'Southeast', midwest: 'Midwest', south: 'South Central', west: 'West',
 };
 /** Coarse region for public display, so a listing never reveals its state. */
-export const regionOf = (state: string) => REGION_LABEL[REGIONS[state.toUpperCase()]] ?? 'United States';
+export const regionOf = (state: string) => {
+  const s = state.toUpperCase();
+  return Object.hasOwn(REGIONS, s) ? REGION_LABEL[REGIONS[s]] : 'United States';
+};
 
 const day = (d: string) => Date.parse(d.slice(0, 10) + 'T00:00:00Z') / 86_400_000;
 const norm = (s: string) => s.trim().toLowerCase();
+const tight = (s: string) => norm(s).replace(/[\s.-]/g, '');
+
+// Motor and packaged-equipment nameplates quote the utilization voltage (460 V) of a nominal system (480 V).
+const UTILIZATION: Record<number, number> = { 200: 208, 220: 240, 230: 240, 440: 480, 460: 480, 550: 600, 575: 600 };
+const nominal = (v: number) => UTILIZATION[v] ?? v;
+
+// Medium-voltage gear is sold by class (15 kV) and applied on a system voltage inside it (12.47 or 13.8 kV).
+const MV_CLASSES: [number, string][] = [[5_000, '5 kV'], [15_500, '15 kV'], [27_000, '27 kV'], [38_000, '38 kV']];
+export function voltageClass(v: number): string {
+  if (v <= 1_000) return 'low voltage';
+  for (const [max, name] of MV_CLASSES) if (v <= max) return `${name} class`;
+  return 'high voltage';
+}
+
+// The same maker under the names people actually type.
+const OEM_FAMILY: Record<string, string> = {
+  schneider: 'schneider electric', 'square d': 'schneider electric', squared: 'schneider electric',
+  'cutler-hammer': 'eaton', 'cutler hammer': 'eaton',
+  liebert: 'vertiv', ge: 'ge vernova', 'general electric': 'ge vernova', hitachi: 'hitachi energy',
+  mitsubishi: 'mitsubishi electric',
+};
+const maker = (s: string) => (Object.hasOwn(OEM_FAMILY, norm(s)) ? OEM_FAMILY[norm(s)] : norm(s));
 
 export function matchListing(req: Request, lst: Listing): MatchResult {
-  // Hard requirements
-  if (norm(req.category) !== norm(lst.category)) return { ok: false, reason: 'different category' };
-  if (req.voltage_v !== lst.voltage_v) return { ok: false, reason: `voltage ${lst.voltage_v} V, need ${req.voltage_v} V` };
-  if (lst.amps < req.amps_min) return { ok: false, reason: `${lst.amps} A is below ${req.amps_min} A` };
-  if (req.conditions_ok.length && !req.conditions_ok.includes(lst.condition))
-    return { ok: false, reason: `condition ${lst.condition} not accepted` };
-
   let score = 100;
   const gaps: Gap[] = [];
   const pen = (n: number, text: string, severity: Gap['severity'] = 'warn') => {
     score -= n;
     gaps.push({ severity, text });
   };
+
+  // Hard requirements
+  if (norm(req.category) !== norm(lst.category)) return { ok: false, reason: 'different category' };
+
+  const need = nominal(req.voltage_v), rated = nominal(lst.voltage_v);
+  if (need !== rated) {
+    const cls = voltageClass(need);
+    const wrong = { ok: false as const, reason: `${volts(lst.voltage_v)} equipment, need ${volts(req.voltage_v)}` };
+    if (cls !== voltageClass(rated) || cls === 'high voltage') return wrong;
+    if (cls === 'low voltage') {
+      if (rated < need) return wrong;
+      pen(10, `Rated ${volts(lst.voltage_v)}, your system is ${volts(req.voltage_v)}; confirm control power, metering and trip settings`);
+    } else {
+      gaps.push({ severity: 'info', text: `Listed at ${volts(lst.voltage_v)}, you asked for ${volts(req.voltage_v)}; both are ${cls}, so confirm the rated maximum voltage` });
+    }
+  }
+
+  if (lst.amps < req.amps_min) return { ok: false, reason: `${lst.amps} A is below ${req.amps_min} A` };
+  if (req.conditions_ok.length && !req.conditions_ok.includes(lst.condition))
+    return { ok: false, reason: `condition ${lst.condition} not accepted` };
 
   // Interrupting rating
   if (req.kaic_min != null) {
@@ -77,28 +117,23 @@ export function matchListing(req: Request, lst: Listing): MatchResult {
 
   // Schedule
   const slack = day(req.need_by) - day(lst.available_date);
-  if (slack < 0) pen(Math.min(40, 15 + Math.round(-slack / 7) * 3), `Available ${-slack} days after the need-by date`);
-  else gaps.push({ severity: 'info', text: `Available ${slack} days before the need-by date` });
+  if (slack < 0) pen(Math.min(40, 15 + Math.round(-slack / 7) * 3), `Available ${-slack} ${-slack === 1 ? 'day' : 'days'} after the need-by date`);
+  else gaps.push({ severity: 'info', text: `Available ${slack} ${slack === 1 ? 'day' : 'days'} before the need-by date` });
 
   // Quantity
   if (lst.quantity < req.quantity) pen(20, `Only ${lst.quantity} of ${req.quantity} units`);
 
   // OEM preference
-  if (req.acceptable_oems.length && !req.acceptable_oems.map(norm).includes(norm(lst.oem)))
+  if (req.acceptable_oems.length && !req.acceptable_oems.map(maker).includes(maker(lst.oem)))
     pen(15, `${lst.oem} is not on the acceptable OEM list`);
 
   // Enclosure
-  if (req.enclosure && lst.enclosure && norm(req.enclosure) !== norm(lst.enclosure))
+  if (req.enclosure && lst.enclosure && tight(req.enclosure) !== tight(lst.enclosure))
     pen(10, `Enclosure ${lst.enclosure}, need ${req.enclosure}`);
   else if (req.enclosure && !lst.enclosure) pen(5, 'Enclosure type not stated');
 
   // Oversize
   if (lst.amps > req.amps_min * 1.5) pen(5, `${lst.amps} A is well above the ${req.amps_min} A needed`, 'info');
-
-  // Budget
-  if (req.budget_max != null && lst.asking_price != null && lst.asking_price > req.budget_max)
-    // Amount withheld on purpose: asking price is private until both sides sign the NDA.
-    pen(15, 'Asking price is above your budget ceiling');
 
   // Freight distance
   if (lst.location_state !== req.site_state) {

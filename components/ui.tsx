@@ -1,4 +1,4 @@
-import { CATEGORIES, CONDITIONS, label } from '@/lib/labels';
+import { CATEGORIES, CONDITIONS, label, units, volts } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
 
 type SpecSource = {
@@ -8,18 +8,18 @@ type SpecSource = {
 
 const n = (v: number) => v.toLocaleString('en-US');
 
-/** Ratings as one readable line: 480 V · 4,000 A · 65 kAIC · NEMA 1 */
+/** Ratings as one readable line: 480 V · 4,000 A · 65 kAIC · NEMA 1 (or 13.8 kV for medium voltage) */
 /** `plain` drops the "or more" qualifier where a column header already says the rating is a minimum. */
 export function Spec({ x, full, plain }: { x: SpecSource; full?: boolean; plain?: boolean }) {
   const amps = x.amps ?? x.amps_min ?? 0;
   const kaic = x.kaic ?? x.kaic_min;
   const min = x.amps_min != null && !plain;
-  const parts = [`${n(x.voltage_v)} V`, `${n(amps)} A${min ? ' or more' : ''}`];
+  const parts = [volts(x.voltage_v), `${n(amps)} A${min ? ' or more' : ''}`];
   if (kaic) parts.push(`${kaic} kAIC${min ? ' or more' : ''}`);
   if (x.enclosure) parts.push(x.enclosure);
   if (full && x.standard) parts.push(x.standard);
   if (full && x.condition) parts.push(label(CONDITIONS, x.condition));
-  if (full && x.quantity != null) parts.push(`${x.quantity} ${x.quantity === 1 ? 'unit' : 'units'}`);
+  if (full && x.quantity != null) parts.push(units(x.quantity));
   return <div className="spec num" style={{ whiteSpace: 'normal' }}>{parts.map(p => <span key={p}>{p}</span>)}</div>;
 }
 
