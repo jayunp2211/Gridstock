@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { date } from '@/lib/labels';
-import { Specs, Status, cat } from '@/components/ui';
+import { Spec, State, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,32 +16,40 @@ export default async function Requests() {
      from requests r where r.buyer_id = $1 order by r.created_at desc`, [u.id]);
   return (
     <>
-      <div className="page-head">
+      <div className="head">
         <div>
-          <span className="eyebrow">Buyer</span>
           <h1>My requests</h1>
-          <p className="lead">Each request is matched against every active listing, and again whenever new gear is listed.</p>
+          <p>Each request is matched against every active listing, and again whenever new gear is listed.</p>
         </div>
-        <Link href="/requests/new" className="btn primary">Post a need</Link>
+        <Link href="/requests/new" className="btn go">Post a need<Arrow /></Link>
       </div>
-      {rows.length === 0 && <div className="empty">No requests yet. Post the spec you need to see what is available now.</div>}
-      {rows.map(r => (
-        <Link key={r.id} href={`/requests/${r.id}`} className="card">
-          <div className="row top-align">
-            <div className="grow">
-              <div className="row" style={{ justifyContent: 'flex-start', gap: 10 }}>
-                <span className="title">{cat(r.category)}</span><Status value={r.status} />
-              </div>
-              <div className="meta">Site in {r.site_state} · need by {date(r.need_by)}</div>
-              <Specs x={r} />
-            </div>
-            <div className="right">
-              <div className="price">{r.matches} {r.matches === 1 ? 'match' : 'matches'}</div>
-              <div className="meta">{r.best != null ? `best fit ${r.best}` : 'watching for new gear'}</div>
-            </div>
-          </div>
-        </Link>
-      ))}
+      {rows.length === 0 ? (
+        <p className="blank">No requests yet. Post the spec you need to see what is available now.</p>
+      ) : (
+        <div className="scroll">
+          <table className="data">
+            <thead>
+              <tr><th>Need</th><th className="wide-only">Minimum rating</th><th className="wide-only">Site</th><th>Need by</th><th>Matches</th><th className="wide-only">Best fit</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.id}>
+                  <td className="lead-cell">
+                    <Link href={`/requests/${r.id}`}>{cat(r.category)}</Link>
+                    <div className="narrow-only under"><Spec x={r} /></div>
+                  </td>
+                  <td className="wide-only"><Spec x={r} plain /></td>
+                  <td className="wide-only">{r.site_state}</td>
+                  <td className="num">{day(r.need_by)}</td>
+                  <td className="num">{r.matches || <span className="soft">Watching</span>}</td>
+                  <td className="wide-only num">{r.best ?? <span className="soft">None yet</span>}</td>
+                  <td><State value={r.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

@@ -2,20 +2,20 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth';
 import { CATEGORIES, CONDITIONS } from '@/lib/labels';
 import { createRequest } from '@/app/actions';
+import { Arrow } from '@/components/ui';
 
 export default async function NewRequest() {
   await requireUser('buyer');
   return (
     <>
-      <Link href="/requests" className="back">← My requests</Link>
-      <div className="page-head">
+      <Link href="/requests" className="back"><Arrow />My requests</Link>
+      <div className="head">
         <div>
-          <span className="eyebrow">Buyer</span>
           <h1>Post a need</h1>
-          <p className="lead">Voltage, minimum amperage and condition are hard requirements. Everything else ranks matches and flags gaps.</p>
+          <p>Voltage, minimum amperage and condition are hard requirements. Everything else ranks matches and flags gaps.</p>
         </div>
       </div>
-      <form action={createRequest} className="card stack form-card">
+      <form action={createRequest} className="stack sheet">
         <fieldset>
           <legend>What you need</legend>
           <div className="fields">
@@ -33,23 +33,24 @@ export default async function NewRequest() {
           </div>
           <div className="fields">
             <label>Enclosure<input name="enclosure" placeholder="NEMA 1" /></label>
-            <label>Acceptable OEMs <span className="hint">comma separated, blank for any</span><input name="acceptable_oems" placeholder="Eaton, Schneider, ABB" /></label>
+            <label><span>Acceptable OEMs <span className="hint">comma separated, blank for any</span></span><input name="acceptable_oems" placeholder="Eaton, Schneider, ABB" /></label>
           </div>
-          <label>Acceptable condition
-            <div className="checks">
-              {CONDITIONS.map(([v, l]) => <label key={v}><input type="checkbox" name="conditions_ok" value={v} defaultChecked={v !== 'used'} /> {l}</label>)}
+          <div role="group" aria-labelledby="cond-label" className="group">
+            <span id="cond-label" className="group-label">Acceptable condition</span>
+            <div className="choices">
+              {CONDITIONS.map(([v, l]) => <label key={v}><input type="checkbox" name="conditions_ok" value={v} defaultChecked={v !== 'used'} />{l}</label>)}
             </div>
-          </label>
+          </div>
         </fieldset>
         <fieldset>
           <legend>Schedule and budget</legend>
           <div className="fields">
-            <label>Need by <span className="hint">energization date</span><input name="need_by" type="date" required /></label>
-            <label>Budget ceiling (USD) <span className="hint">optional</span><input name="budget_max" inputMode="numeric" placeholder="900,000" /></label>
+            <label><span>Need by <span className="hint">energization date</span></span><input name="need_by" type="date" required /></label>
+            <label><span>Budget ceiling (USD) <span className="hint">optional</span></span><input name="budget_max" inputMode="numeric" placeholder="900,000" /></label>
           </div>
-          <label>Notes <span className="hint">project context, utility requirements</span><textarea name="notes" /></label>
+          <label><span>Notes <span className="hint">project context, utility requirements</span></span><textarea name="notes" /></label>
         </fieldset>
-        <div><button className="primary">Find matches</button></div>
+        <div><button className="go">Find matches<Arrow /></button></div>
       </form>
     </>
   );

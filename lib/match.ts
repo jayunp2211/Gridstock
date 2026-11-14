@@ -45,6 +45,12 @@ const regionList: [string, string[]][] = [
 ];
 for (const [region, states] of regionList) for (const s of states) REGIONS[s] = region;
 
+const REGION_LABEL: Record<string, string> = {
+  northeast: 'Northeast', southeast: 'Southeast', midwest: 'Midwest', south: 'South Central', west: 'West',
+};
+/** Coarse region for public display, so a listing never reveals its state. */
+export const regionOf = (state: string) => REGION_LABEL[REGIONS[state.toUpperCase()]] ?? 'United States';
+
 const day = (d: string) => Date.parse(d.slice(0, 10) + 'T00:00:00Z') / 86_400_000;
 const norm = (s: string) => s.trim().toLowerCase();
 

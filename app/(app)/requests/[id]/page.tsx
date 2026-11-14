@@ -2,10 +2,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { q, one } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { date } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
 import { requestIntro } from '@/app/actions';
-import { Specs, Score, cat } from '@/components/ui';
+import { Spec, Fit, Checks, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +13,8 @@ type Req = { id: string; buyer_id: string; category: string; voltage_v: number; 
 type M = { id: string; score: number; gaps: Gap[]; oem: string; model: string | null; voltage_v: number; amps: number;
   kaic: number | null; enclosure: string | null; condition: string; quantity: number; location_state: string;
   available_date: string; deal_id: string | null; seller_verified: boolean; listing_status: string };
+
+const TAKEN: Record<string, string> = { under_offer: 'Under offer with another buyer', sold: 'Sold' };
 
 export default async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser('buyer');
@@ -30,37 +31,40 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
      where m.request_id = $1 and l.status <> 'withdrawn' order by m.score desc, l.available_date`, [id]);
   return (
     <>
-      <Link href="/requests" className="back">← My requests</Link>
-      <div className="page-head">
+      <Link href="/requests" className="back"><Arrow />My requests</Link>
+      <div className="head">
         <div>
-          <span className="eyebrow">Request · need by {date(r.need_by)}</span>
           <h1>{cat(r.category)} for a site in {r.site_state}</h1>
-          <Specs x={r} extra={r.acceptable_oems.length ? [['OEMs', r.acceptable_oems.join(', ')]] : undefined} />
+          <p>
+            Needed by {day(r.need_by)}.{' '}
+            {r.acceptable_oems.length ? `Acceptable OEMs: ${r.acceptable_oems.join(', ')}.` : 'Any OEM.'}
+          </p>
+          <Spec x={r} full />
         </div>
       </div>
-      <h2 style={{ marginTop: 0 }}>{matches.length} matching {matches.length === 1 ? 'listing' : 'listings'}, best fit first</h2>
-      {matches.length === 0 && <div className="empty">No matches yet. You will get a notification when matching gear is listed.</div>}
-      {matches.map(m => (
-        <div key={m.id} className="card">
-          <div className="row top-align">
-            <Score value={m.score} />
-            <div className="grow">
-              <div className="row" style={{ justifyContent: 'flex-start', gap: 10 }}>
-                <span className="title">{m.oem} {m.model ?? ''}</span>
-                {m.seller_verified && <span className="pill on">Verified seller</span>}
-                {m.listing_status !== 'active' && <span className="pill">{m.listing_status.replace('_', ' ')}</span>}
-              </div>
-              <div className="meta">Ships from {m.location_state} · available {date(m.available_date)}</div>
-              <Specs x={m} />
-              <ul className="gaps">{m.gaps.map((g, i) => <li key={i} className={g.severity}>{g.text}</li>)}</ul>
-            </div>
+      <h2>{matches.length === 0 ? 'No matching listings yet' : `${matches.length} matching ${matches.length === 1 ? 'listing' : 'listings'}, best fit first`}</h2>
+      {matches.length === 0 && <p className="blank">You will get a notification when matching gear is listed.</p>}
+      <div className="matches">
+        {matches.map(m => (
+          <article key={m.id} className="match">
+            <Fit value={m.score} />
             <div>
-              {m.deal_id ? <Link href={`/deals/${m.deal_id}`} className="btn ghost">Open deal room</Link>
-                : <form action={requestIntro}><input type="hidden" name="match_id" value={m.id} /><button className="primary">Request intro</button></form>}
+              <h3>{m.oem} {m.model ?? ''}</h3>
+              <Spec x={m} full />
+              <p className="where">
+                Ships from {m.location_state}, available {day(m.available_date)}.
+                {m.seller_verified ? ' Seller verified by Gridstock.' : ''}
+                {!m.deal_id && TAKEN[m.listing_status] ? ` ${TAKEN[m.listing_status]}.` : ''}
+              </p>
+              <Checks gaps={m.gaps} />
             </div>
-          </div>
-        </div>
-      ))}
+            <div className="act">
+              {m.deal_id ? <Link href={`/deals/${m.deal_id}`} className="btn line">Open deal room<Arrow /></Link>
+                : <form action={requestIntro}><input type="hidden" name="match_id" value={m.id} /><button className="go">Request intro<Arrow /></button></form>}
+            </div>
+          </article>
+        ))}
+      </div>
     </>
   );
 }

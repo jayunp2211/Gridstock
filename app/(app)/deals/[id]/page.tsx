@@ -2,10 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { q, one } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { STAGES, STAGE_LABEL, money, date } from '@/lib/labels';
+import { STAGES, STAGE_LABEL, money } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
 import { acceptNda, makeOffer, postMessage, setStage } from '@/app/actions';
-import { Specs, Score, cat } from '@/components/ui';
+import { Spec, Fit, Checks, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +18,9 @@ type D = {
   buyer_name: string; buyer_company: string; seller_name: string; seller_company: string; need_by: string; site_state: string;
 };
 type Msg = { id: string; body: string; created_at: string; name: string | null; company: string | null; author_id: string | null };
+
+const stamp = (d: string) =>
+  new Date(d).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + ' UTC';
 
 export default async function DealRoom({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
@@ -41,99 +44,108 @@ export default async function DealRoom({ params }: { params: Promise<{ id: strin
   const who = (m: Msg) => {
     if (!m.author_id) return 'Gridstock';
     if (m.author_id === u.id) return 'You';
-    if (m.author_id === d.buyer_id) return reveal ? `${m.name} · ${m.company}` : 'Buyer';
-    if (m.author_id === d.seller_id) return reveal ? `${m.name} · ${m.company}` : 'Seller';
-    return 'Gridstock ops';
+    if (m.author_id === d.buyer_id) return reveal ? `${m.name}, ${m.company}` : 'Buyer';
+    if (m.author_id === d.seller_id) return reveal ? `${m.name}, ${m.company}` : 'Seller';
+    return 'Gridstock operations';
   };
-  const kind = (m: Msg) => (m.body.startsWith('Stage moved to') ? 'sys' : m.author_id === u.id ? 'me' : '');
+  const isEvent = (m: Msg) => m.body.startsWith('Stage moved to');
   const stageIdx = STAGES.indexOf(d.stage as (typeof STAGES)[number]);
   const fee = d.offer_price ? Math.round(d.offer_price * Number(d.fee_pct) / 100) : null;
-  const hidden = <span className="pill">Hidden until NDA</span>;
+  const hidden = <span className="soft">Hidden until NDA</span>;
 
   return (
     <>
-      <Link href="/deals" className="back">← Deals</Link>
-      <div className="row top-align" style={{ flexWrap: 'nowrap' }}>
-        <div className="grow" style={{ minWidth: 0 }}>
-          <span className="eyebrow">Deal room · {cat(d.category)}</span>
+      <Link href="/deals" className="back"><Arrow />Deals</Link>
+      <div className="dealtop">
+        <div>
           <h1>{d.oem} {d.model ?? ''}</h1>
-          <Specs x={d} />
+          <Spec x={d} full />
+          <p className="soft">{cat(d.category)}</p>
         </div>
-        <Score value={d.score} />
+        <Fit value={d.score} />
       </div>
 
-      <div className="stepper" aria-label="Deal stage">
-        {STAGES.map((s, i) => <div key={s} className={`step ${s === d.stage ? 'now' : i < stageIdx ? 'done' : ''}`}>{STAGE_LABEL[s]}</div>)}
-      </div>
-      {d.stage === 'lost' && <div className="notice">This deal was marked lost.</div>}
+      <ol className="stages" aria-label="Deal stage">
+        {STAGES.map((s, i) => (
+          <li key={s} className={s === d.stage ? 'now' : i < stageIdx ? 'done' : ''} aria-current={s === d.stage ? 'step' : undefined}>{STAGE_LABEL[s]}</li>
+        ))}
+      </ol>
+      {d.stage === 'lost' && <div className="notice" role="status">This deal was marked lost.</div>}
 
       {!ndaDone && (
-        <div className="card nda">
-          <h3>Mutual NDA with non-circumvention</h3>
-          <p className="small" style={{ margin: '0 0 14px' }}>Both parties agree to keep project and pricing details confidential, and that any purchase arising from this introduction within 12 months closes through Gridstock. Identities and asking price are revealed once both sides accept.</p>
-          <div className="row" style={{ justifyContent: 'flex-start' }}>
-            <span className={`pill dot ${d.buyer_nda_at ? 'good' : ''}`}>Buyer {d.buyer_nda_at ? 'accepted' : 'pending'}</span>
-            <span className={`pill dot ${d.seller_nda_at ? 'good' : ''}`}>Seller {d.seller_nda_at ? 'accepted' : 'pending'}</span>
-            {!myNda && <form action={acceptNda} style={{ marginLeft: 'auto' }}><input type="hidden" name="deal_id" value={d.id} /><button className="primary">Accept NDA</button></form>}
+        <section className="panel nda">
+          <div>
+            <h3>Mutual NDA with non-circumvention</h3>
+            <p>Both parties agree to keep project and pricing details confidential, and that any purchase arising from this introduction within 12 months closes through Gridstock. Identities and asking price are revealed once both sides accept.</p>
           </div>
-        </div>
+          <div className="nda-side">
+            <ul>
+              <li className={d.buyer_nda_at ? 'state live' : 'state'}>Buyer {d.buyer_nda_at ? 'accepted' : 'has not accepted yet'}</li>
+              <li className={d.seller_nda_at ? 'state live' : 'state'}>Seller {d.seller_nda_at ? 'accepted' : 'has not accepted yet'}</li>
+            </ul>
+            {!myNda && <form action={acceptNda}><input type="hidden" name="deal_id" value={d.id} /><button className="go">Accept NDA<Arrow /></button></form>}
+          </div>
+        </section>
       )}
 
-      <div className="grid2">
-        <div className="card">
+      <div className="pair">
+        <section>
           <h2>Parties and fit</h2>
-          <dl className="kv">
-            <dt>Buyer</dt><dd>{reveal || isBuyer ? <>{d.buyer_name}<div className="muted small">{d.buyer_company}</div></> : hidden}</dd>
-            <dt>Site</dt><dd>{d.site_state} · need by {date(d.need_by)}</dd>
-            <dt>Seller</dt><dd>{reveal || isSeller ? <>{d.seller_name}<div className="muted small">{d.seller_company}</div></> : hidden}</dd>
-            <dt>Ships from</dt><dd>{d.location_state} · available {date(d.available_date)}</dd>
+          <dl className="facts">
+            <dt>Buyer</dt><dd>{reveal || isBuyer ? <>{d.buyer_name}<div className="soft small">{d.buyer_company}</div></> : hidden}</dd>
+            <dt>Site</dt><dd>{d.site_state}, needed by {day(d.need_by)}</dd>
+            <dt>Seller</dt><dd>{reveal || isSeller ? <>{d.seller_name}<div className="soft small">{d.seller_company}</div></> : hidden}</dd>
+            <dt>Ships from</dt><dd>{d.location_state}, available {day(d.available_date)}</dd>
           </dl>
-          <ul className="gaps">{d.gaps.map((g, i) => <li key={i} className={g.severity}>{g.text}</li>)}</ul>
-        </div>
-        <div className="card">
+          <Checks gaps={d.gaps} />
+        </section>
+        <section>
           <h2>Commercials</h2>
-          <dl className="kv">
-            <dt>Asking</dt><dd className="price">{reveal || isSeller ? money(d.asking_price) : hidden}</dd>
-            <dt>Offer</dt><dd className="price">{money(d.offer_price)}</dd>
-            {fee != null && (isAdmin || isBuyer) && <><dt>Fee</dt><dd>{money(fee)} <span className="muted small">({Number(d.fee_pct)}% at close)</span></dd></>}
-            <dt>Warranty</dt><dd>{d.warranty_status ?? '—'}</dd>
+          <dl className="facts">
+            <dt>Asking</dt><dd className={(reveal || isSeller) && d.asking_price != null ? 'big num' : ''}>{reveal || isSeller ? (d.asking_price == null ? <span className="soft">Not set</span> : money(d.asking_price)) : hidden}</dd>
+            <dt>Offer</dt><dd className={d.offer_price == null ? '' : 'big num'}>{d.offer_price == null ? <span className="soft">None yet</span> : money(d.offer_price)}</dd>
+            {fee != null && (isAdmin || isBuyer) && <><dt>Fee</dt><dd className="num">{money(fee)} <span className="soft small">({Number(d.fee_pct)}% at close)</span></dd></>}
+            <dt>Warranty</dt><dd>{d.warranty_status ?? <span className="soft">Not stated</span>}</dd>
+            {d.notes && reveal && <><dt>Seller notes</dt><dd>{d.notes}</dd></>}
           </dl>
-          {d.notes && reveal && <p className="small muted" style={{ margin: '16px 0 0' }}>{d.notes}</p>}
           {ndaDone && d.stage !== 'closed' && d.stage !== 'lost' && (
-            <form action={makeOffer} className="inline-form" style={{ marginTop: 18 }}>
+            <form action={makeOffer} className="inline offer">
               <input type="hidden" name="deal_id" value={d.id} />
-              <input name="offer_price" inputMode="numeric" placeholder="Offer in USD" required />
-              <button className="secondary">{isSeller ? 'Counter' : 'Make offer'}</button>
+              <input name="offer_price" inputMode="numeric" placeholder="Offer in USD" aria-label="Offer in USD" required />
+              <button>{isSeller ? 'Counter' : 'Make offer'}</button>
             </form>
           )}
-        </div>
+        </section>
       </div>
 
       {isAdmin && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <h3>Ops: move stage</h3>
-          <form action={setStage} className="inline-form">
+        <section className="panel ops">
+          <h3>Operations: move this deal to another stage</h3>
+          <form action={setStage} className="inline">
             <input type="hidden" name="deal_id" value={d.id} />
-            <select name="stage" defaultValue={d.stage}>{[...STAGES, 'lost'].map(s => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}</select>
-            <button className="secondary">Update</button>
+            <select name="stage" defaultValue={d.stage} aria-label="Stage">{[...STAGES, 'lost'].map(s => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}</select>
+            <button>Update</button>
           </form>
-        </div>
+        </section>
       )}
 
       <h2>Messages</h2>
-      {msgs.length === 0 && <div className="empty">{ndaDone ? 'No messages yet. Share submittals, test reports and photos here.' : 'Messages open once both sides accept the NDA.'}</div>}
-      <div className="thread">
-        {msgs.map(m => (
-          <div key={m.id} className={`msg ${kind(m)}`}>
-            {kind(m) !== 'sys' && <div className="who-line">{who(m)} · {new Date(m.created_at).toISOString().slice(0, 16).replace('T', ' ')} UTC</div>}
-            {m.body}
-          </div>
-        ))}
-      </div>
+      {msgs.length === 0 ? (
+        <p className="blank">{ndaDone ? 'No messages yet. Share submittals, test reports and photos here.' : 'Messages open once both sides accept the NDA.'}</p>
+      ) : (
+        <ul className="log">
+          {msgs.map(m => (
+            <li key={m.id} className={isEvent(m) ? 'event' : undefined}>
+              <div className="by">{isEvent(m) ? 'Stage change' : who(m)}<time dateTime={new Date(m.created_at).toISOString()}>{stamp(m.created_at)}</time></div>
+              <p>{m.body}</p>
+            </li>
+          ))}
+        </ul>
+      )}
       {(ndaDone || isAdmin) && (
-        <form action={postMessage} className="stack" style={{ marginTop: 18, maxWidth: 640 }}>
+        <form action={postMessage} className="stack reply">
           <input type="hidden" name="deal_id" value={d.id} />
-          <textarea name="body" placeholder="Message, or links to submittals and test reports" required />
+          <textarea name="body" placeholder="Message, or links to submittals and test reports" aria-label="Message" required />
           <div><button>Send</button></div>
         </form>
       )}
