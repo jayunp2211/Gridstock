@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import { syncRequest } from '@/lib/matching';
 import { Spec, State, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
@@ -10,9 +11,12 @@ type Row = { id: string; category: string; voltage_v: number; amps_min: number; 
 
 export default async function Requests() {
   const u = await requireUser('buyer');
+  const mine = await q<{ id: string }>(`select id from requests where buyer_id = $1 and status = 'open'`, [u.id]);
+  for (const r of mine) await syncRequest(r.id);
   const rows = await q<Row>(
-    `select r.*, (select count(*)::int from matches m where m.request_id = r.id) as matches,
-            (select max(score) from matches m where m.request_id = r.id) as best
+    `select r.*,
+            (select count(*)::int from matches m join listings l on l.id = m.listing_id where m.request_id = r.id and l.status = 'active') as matches,
+            (select max(m.score) from matches m join listings l on l.id = m.listing_id where m.request_id = r.id and l.status = 'active') as best
      from requests r where r.buyer_id = $1 order by r.created_at desc`, [u.id]);
   return (
     <>
@@ -41,7 +45,7 @@ export default async function Requests() {
                   <td className="wide-only"><Spec x={r} plain /></td>
                   <td className="wide-only">{r.site_state}</td>
                   <td className="num">{day(r.need_by)}</td>
-                  <td className="num">{r.matches || <span className="soft">Watching</span>}</td>
+                  <td className="num">{r.matches || <span className="soft">{r.status === 'open' ? 'Watching' : 'None'}</span>}</td>
                   <td className="wide-only num">{r.best ?? <span className="soft">None yet</span>}</td>
                   <td><State value={r.status} /></td>
                 </tr>

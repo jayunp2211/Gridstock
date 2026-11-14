@@ -5,9 +5,13 @@ import { currentUser } from '@/lib/auth';
 import { signOut } from './actions';
 import { one } from '@/lib/db';
 
+const title = 'Gridstock. Surplus switchgear, breakers and cooling for data center builds';
+const description = 'A private market for new and never-energized electrical and cooling equipment from paused data center projects, matched to your spec and energization date.';
 export const metadata = {
-  title: 'Gridstock. Surplus switchgear, breakers and cooling for data center builds',
-  description: 'A private market for new and never-energized electrical and cooling equipment from paused data center projects, matched to your spec and energization date.',
+  metadataBase: new URL('https://gridstock.netlify.app'),
+  title,
+  description,
+  openGraph: { title, description, siteName: 'Gridstock', type: 'website', url: '/' },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="frame nav">
           <Link href="/" className="wordmark">Gridstock</Link>
           <nav aria-label="Main">
-            {!u && <><Link href="/#available">Available gear</Link><Link href="/#wanted">Wanted</Link><Link href="/#how">How a deal runs</Link></>}
+            {!u && <><Link href="/#available">Gear</Link><Link href="/#wanted">Wanted</Link><Link href="/#how">How a deal runs</Link></>}
             {u?.role === 'seller' && <><Link href="/listings">My listings</Link><Link href="/listings/new">List gear</Link></>}
             {u?.role === 'buyer' && <><Link href="/requests">My requests</Link><Link href="/requests/new">Post a need</Link></>}
             {u && <Link href="/deals">Deals</Link>}
@@ -28,9 +32,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </nav>
           <div className="side">
             {u ? (
-              <form action={signOut}><span className="who soft">{u.name}, {u.company}</span><button className="text">Sign out</button></form>
+              <form action={signOut}><span className="who soft">Demo account: {u.name}, {u.company}</span><button className="text">Sign out</button></form>
             ) : (
-              <Link href="/login" className="u">Sign in</Link>
+              <Link href="/login" className="u">Request access</Link>
             )}
           </div>
         </header>
