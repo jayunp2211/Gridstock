@@ -10,10 +10,11 @@ import { Spec, Fit, Checks, State, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
-type L = { id: string; seller_id: string; category: string; oem: string; model: string | null; voltage_v: number; amps: number;
-  kaic: number | null; enclosure: string | null; standard: string | null; condition: string; quantity: number; location_state: string;
+type L = { id: string; seller_id: string; category: string; oem: string; model: string | null; voltage_v: number; secondary_v: number | null;
+  amps: number | null; capacity: number | null; kaic: number | null; configuration: string | null; enclosure: string | null; standard: string | null; condition: string; quantity: number; location_state: string;
   available_date: string; asking_price: number | null; warranty_status: string | null; notes: string | null; status: string };
-type M = { id: string; score: number; gaps: Gap[]; category: string; voltage_v: number; amps_min: number; kaic_min: number | null;
+type M = { id: string; score: number; gaps: Gap[]; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null;
+  capacity_min: number | null; kaic_min: number | null;
   enclosure: string | null; quantity: number; site_state: string; need_by: string; request_status: string; deal_id: string | null;
   deal_stage: string | null; buyer_verified: boolean };
 
@@ -27,7 +28,8 @@ export default async function ListingDetail({ params, searchParams }: { params: 
   await syncListing(id);
   // Sellers see the need, never the buyer: no name, company, budget or project notes before the NDA.
   const reqs = await q<M>(
-    `select m.id, m.score, m.gaps, r.category, r.voltage_v, r.amps_min, r.kaic_min, r.enclosure, r.quantity, r.site_state, r.need_by,
+    `select m.id, m.score, m.gaps, r.category, r.voltage_v, r.secondary_v, r.amps_min, r.capacity_min, r.kaic_min, r.enclosure, r.quantity,
+            r.site_state, r.need_by,
             r.status as request_status, d.id as deal_id, d.stage as deal_stage, b.verified as buyer_verified
      from matches m join requests r on r.id = m.request_id join users b on b.id = r.buyer_id left join deals d on d.match_id = m.id
      where m.listing_id = $1 and (r.status = 'open' or d.id is not null) order by m.score desc, r.need_by`, [id]);
@@ -59,6 +61,8 @@ export default async function ListingDetail({ params, searchParams }: { params: 
           {l.asking_price == null ? <span className="soft">Not set</span> : <span className="big num">{money(l.asking_price)}</span>}
           {l.asking_price != null && <div className="soft small">For {l.quantity === 1 ? 'the unit' : `all ${units(l.quantity)}`}{each != null && `, ${money(each)} each`}. Buyers see it only after the NDA.</div>}
         </dd>
+        <dt>Configuration</dt>
+        <dd>{l.configuration ?? <span className="soft">Not described</span>}<div className="soft small">Matched buyers see this before the NDA.</div></dd>
         <dt>Warranty</dt><dd>{l.warranty_status ?? <span className="soft">Not stated</span>}</dd>
         {l.notes && <><dt>Notes</dt><dd>{l.notes}<div className="soft small">Shown to a buyer only after the NDA.</div></dd></>}
       </dl>

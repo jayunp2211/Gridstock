@@ -6,7 +6,8 @@ import { Spec, State, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
-type Row = { id: string; category: string; voltage_v: number; amps_min: number; kaic_min: number | null; enclosure: string | null;
+type Row = { id: string; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null; capacity_min: number | null;
+  kaic_min: number | null; enclosure: string | null;
   quantity: number; site_state: string; need_by: string; status: string; matches: number; best: number | null };
 
 export default async function Requests() {

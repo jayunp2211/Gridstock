@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 type D = { id: string; stage: string; offer_price: number | null; offer_by: string | null; buyer_nda_at: string | null;
   seller_nda_at: string | null; updated_at: string; category: string; oem: string; model: string | null; voltage_v: number;
-  amps: number; kaic: number | null; enclosure: string | null; buyer_id: string; seller_id: string };
+  secondary_v: number | null; amps: number | null; capacity: number | null; kaic: number | null; enclosure: string | null; buyer_id: string; seller_id: string };
 
 /** Whose move it is, in the viewer's own terms. `mine` marks the steps that wait on the viewer. */
 function nextStep(d: D, u: User): { text: string; mine: boolean } {
@@ -28,7 +28,7 @@ export default async function Deals() {
   const u = await requireUser();
   const rows = await q<D>(
     `select d.id, d.stage, d.offer_price, d.offer_by, d.buyer_nda_at, d.seller_nda_at, d.updated_at, l.category, l.oem, l.model,
-            l.voltage_v, l.amps, l.kaic, l.enclosure, r.buyer_id, l.seller_id
+            l.voltage_v, l.secondary_v, l.amps, l.capacity, l.kaic, l.enclosure, r.buyer_id, l.seller_id
      from deals d join matches m on m.id = d.match_id join listings l on l.id = m.listing_id join requests r on r.id = m.request_id
      where $1 in (l.seller_id, r.buyer_id) or $2 = 'admin' order by (d.stage = 'lost'), d.updated_at desc`, [u.id, u.role]);
   return (

@@ -8,7 +8,8 @@ import { Spec, State, Arrow, cat, day } from '@/components/ui';
 export const dynamic = 'force-dynamic';
 
 type Row = {
-  id: string; category: string; oem: string; model: string | null; voltage_v: number; amps: number; kaic: number | null;
+  id: string; category: string; oem: string; model: string | null; voltage_v: number; secondary_v: number | null; amps: number | null;
+  capacity: number | null; kaic: number | null;
   enclosure: string | null; condition: string; quantity: number; location_state: string; available_date: string;
   asking_price: number | null; status: string; matches: number; deals: number;
 };
