@@ -110,7 +110,7 @@ export async function seedDemo(run: Run) {
   }
 
   await run(`delete from notifications where user_id in ${SAMPLE}`);
-  // Deal messages go with their deals.
+  // Deal messages and documents go with their deals.
   await run(`delete from deals where match_id in (select m.id from matches m join listings l on l.id = m.listing_id join requests r on r.id = m.request_id
                where l.seller_id in ${SAMPLE} or r.buyer_id in ${SAMPLE})`);
   await run(`delete from matches where listing_id in (select id from listings where seller_id in ${SAMPLE})

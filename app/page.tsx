@@ -4,6 +4,7 @@ import { currentUser } from '@/lib/auth';
 import { CONDITIONS, label } from '@/lib/labels';
 import { regionOf } from '@/lib/match';
 import { sampleListings, sampleRequests } from '@/lib/demo';
+import { filled, taken } from '@/lib/units';
 import { Spec, Arrow, cat, month } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
@@ -23,10 +24,13 @@ type Need = { id: string; category: string; voltage_v: number; secondary_v: numb
 async function boards(): Promise<{ gear: Gear[]; needs: Need[]; sample: boolean }> {
   try {
     const [gear, needs] = await Promise.all([
-      q<Gear>(`select l.id, l.category, l.oem, l.voltage_v, l.secondary_v, l.amps, l.capacity, l.kaic, l.enclosure, l.condition, l.quantity, l.location_state, l.available_date
+      // Quantities are the units nobody has taken yet, and the units of a need no deal covers yet.
+      q<Gear>(`select l.id, l.category, l.oem, l.voltage_v, l.secondary_v, l.amps, l.capacity, l.kaic, l.enclosure, l.condition,
+                      l.quantity - ${taken('l')} as quantity, l.location_state, l.available_date
                from listings l join users u on u.id = l.seller_id
                where l.status = 'active' and u.verified and u.email not like '%.test' order by l.available_date, l.created_at limit 8`),
-      q<Need>(`select r.id, r.category, r.voltage_v, r.secondary_v, r.amps_min, r.capacity_min, r.kaic_min, r.enclosure, r.quantity, r.site_state, r.need_by
+      q<Need>(`select r.id, r.category, r.voltage_v, r.secondary_v, r.amps_min, r.capacity_min, r.kaic_min, r.enclosure,
+                      r.quantity - ${filled('r')} as quantity, r.site_state, r.need_by
                from requests r join users u on u.id = r.buyer_id
                where r.status = 'open' and u.verified and u.email not like '%.test' order by r.need_by, r.created_at limit 8`),
     ]);
@@ -45,7 +49,7 @@ const COURSE: [string, string][] = [
   ['List or post', 'Owners enter what is on the nameplate. Builders post the spec they need and the date they must energize.'],
   ['Match by spec', 'Voltage class, amperage, interrupting rating and condition are checked. You get a fit score out of 100 and the exact gaps. It is a first screen, and the documents settle the rest.'],
   ['Meet under NDA', 'Names and pricing stay hidden until both sides sign. Then submittals, test reports and offers move in one room.'],
-  ['Inspect and close', 'An independent testing firm checks the gear before funds leave escrow and it ships to site.'],
+  ['Inspect and close', 'The buyer appoints an independent testing firm to check the gear. The price sits with an escrow agent both sides choose, and is released on delivery.'],
 ];
 
 export default async function Home() {
