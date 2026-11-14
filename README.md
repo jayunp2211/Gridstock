@@ -16,7 +16,8 @@ A private marketplace that matches stranded data center electrical and cooling g
 - **Documents:** after the NDA, either side adds submittals, factory test reports, nameplate photos or a spec, up to 15 MB each. Files live in Postgres (`lib/deal-files.ts`) and are sent in 3 MB parts, because the host limits the size of a request. Only the two sides and operations can open them, and they are always served as downloads. After a deal ends each side keeps only its own.
 - **Inspection and escrow are run by the two sides** and recorded in the deal room (`app/(app)/deals/[id]/steps.tsx`). The buyer appoints an independent testing firm and records the result, or waives it. The buyer then deposits the price with an escrow agent both sides choose, the seller confirms with that agent before shipping, and the buyer confirms delivery, which closes the deal. Gridstock does not inspect equipment and never holds the money. Ops can still move a stage by hand.
 - **About** (`/about`): who runs Gridstock, what it does and does not do in a deal, the fee, and a contact form.
-- **Ops dashboard** (`/admin`): pipeline counts, deals, open requests by need-by date, sample accounts to verify, counts of real access requests and contact messages, and a button that resets the demo.
+- **Ops dashboard** (`/admin`): pipeline counts, earnings, deals, open requests by need-by date, sample accounts to verify, counts of real access requests and contact messages, and a button that resets the demo.
+- **Earnings** (`lib/earnings.ts`): the fee on every closed deal, for this month, this year and all time, with one line for each month a deal closed in. Months and years start at midnight in `BOOKS_TZ` (America/Toronto). These are fees that fell due, since invoices are sent by hand and payments are not recorded. The sample operations account counts sample deals only.
 - **Inbox:** in-app notifications for new matches, intros, NDA signatures, offers, messages, documents and each inspection and escrow step.
 
 ## Sample data and real accounts
@@ -39,7 +40,7 @@ export DATABASE_URL=postgres://user:pass@localhost:5432/gridstock
 npm run db:migrate
 npm run db:seed      # fictional demo companies and gear; safe to rerun, replaces sample data only
 npm run dev
-npm test             # unit tests for matching, units and files
+npm test             # unit tests for matching, units, files and earnings
 ```
 
 Sign in at `/login` with a demo account, such as the buyer "Alex Chen", the seller "Dana Ruiz", or "Ops Team".

@@ -2,14 +2,30 @@ import Link from 'next/link';
 import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { STAGE_LABEL, money } from '@/lib/labels';
+import { BOOKS_TZ, earnings, monthName, type Closing, type Total } from '@/lib/earnings';
 import { resetDemo, verifyUser } from '@/app/actions';
 import { Spec, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {
-  await requireUser('admin');
+  const u = await requireUser('admin');
   const { reset } = await searchParams;
+  // Earnings are the fees on closed deals. A deal closes when the buyer confirms delivery; one that operations
+  // closed by hand counts from the day it was moved. The sample operations account is open to every visitor,
+  // so it counts deals between sample accounts only, and real deals are counted only for a real account.
+  const sample = u.email.endsWith('.test');
+  const closings = await q<Closing>(
+    `select to_char(coalesce(d.escrow_released_at, d.updated_at) at time zone $1, 'YYYY-MM') as month, d.offer_price as price, d.fee_pct
+     from deals d join matches m on m.id = d.match_id join listings l on l.id = m.listing_id join requests r on r.id = m.request_id
+     join users b on b.id = r.buyer_id join users s on s.id = l.seller_id
+     where d.stage = 'closed' and d.offer_price is not null and (b.email like '%.test' and s.email like '%.test') = $2`, [BOOKS_TZ, sample]);
+  const [{ this_month }] = await q<{ this_month: string }>(`select to_char(now() at time zone $1, 'YYYY-MM') as this_month`, [BOOKS_TZ]);
+  const earned = earnings(closings, this_month);
+  const periods: [string, string, Total][] = [
+    ['This month', monthName(this_month), earned.month], ['This year', this_month.slice(0, 4), earned.year], ['All time', 'Since the first deal', earned.all],
+  ];
+  const closed = (t: Total) => `${t.deals} ${t.deals === 1 ? 'deal' : 'deals'} closed`;
   const [counts] = await q<{ listings: number; requests: number; matches: number; deals: number; closed_value: number | null; waiting: number; messages: number }>(
     `select (select count(*)::int from listings where status = 'active') as listings,
             (select count(*)::int from requests where status = 'open') as requests,
@@ -48,6 +64,36 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <dl className="figures">
         {figures.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="num">{v}</dd></div>)}
       </dl>
+
+      <h2 id="earnings">Earnings</h2>
+      <p className="lede soft">
+        The success fee on every deal that has closed.{sample ? ' These are the demo\u2019s sample deals, so the amounts are not real income.' : ''}{' '}
+        Fees are invoiced by hand, so this is what fell due, not what was paid.
+      </p>
+      <dl className="figures earned">
+        {periods.map(([k, when, t]) => (
+          <div key={k}>
+            <dt>{k}<span className="when">{when}</span></dt>
+            <dd className="num">{money(t.fees)}</dd>
+            <dd className="sub">{t.deals === 0 ? 'No deal closed' : <>{closed(t)}, <span className="num">{money(t.value)}</span> of equipment</>}</dd>
+          </div>
+        ))}
+      </dl>
+      {earned.byMonth.length > 0 && (
+        <div className="scroll">
+          <table className="data months">
+            <thead><tr><th>Month</th><th>Deals closed</th><th>Equipment sold</th><th>Fees</th></tr></thead>
+            <tbody>
+              {earned.byMonth.map(m => (
+                <tr key={m.month}>
+                  <td className="lead-cell">{monthName(m.month)}</td><td className="num">{m.deals}</td>
+                  <td className="num">{money(m.value)}</td><td className="num">{money(m.fees)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2>Deals</h2>
       <div className="scroll">
