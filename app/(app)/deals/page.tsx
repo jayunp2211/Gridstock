@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { STAGE_LABEL, money } from '@/lib/labels';
-import { Specs, cat } from '@/components/ui';
+import { Spec, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,30 +17,38 @@ export default async function Deals() {
      where $1 in (l.seller_id, r.buyer_id) or $2 = 'admin' order by d.updated_at desc`, [u.id, u.role]);
   return (
     <>
-      <div className="page-head">
+      <div className="head">
         <div>
-          <span className="eyebrow">Pipeline</span>
           <h1>Deals</h1>
-          <p className="lead">Every deal moves through NDA, documents, offer, independent inspection and escrow.</p>
+          <p>Every deal moves through NDA, documents, offer, independent inspection and escrow.</p>
         </div>
       </div>
-      {rows.length === 0 && <div className="empty">No deals yet. A deal room opens when a buyer requests an intro on a match.</div>}
-      {rows.map(d => (
-        <Link key={d.id} href={`/deals/${d.id}`} className="card">
-          <div className="row top-align">
-            <div className="grow">
-              <div className="row" style={{ justifyContent: 'flex-start', gap: 10 }}>
-                <span className="title">{d.oem} · {cat(d.category)}</span><span className="pill on">{STAGE_LABEL[d.stage]}</span>
-              </div>
-              <Specs x={d} extra={[['Fit', String(d.score)]]} />
-            </div>
-            <div className="right">
-              <div className="price">{money(d.offer_price)}</div>
-              <div className="meta">current offer</div>
-            </div>
-          </div>
-        </Link>
-      ))}
+      {rows.length === 0 ? (
+        <p className="blank">No deals yet. A deal room opens when a buyer requests an intro on a match.</p>
+      ) : (
+        <div className="scroll">
+          <table className="data">
+            <thead>
+              <tr><th>Equipment</th><th className="wide-only">Rating</th><th className="wide-only">Fit</th><th>Stage</th><th>Offer</th><th className="wide-only">Updated</th></tr>
+            </thead>
+            <tbody>
+              {rows.map(d => (
+                <tr key={d.id}>
+                  <td className="lead-cell">
+                    <Link href={`/deals/${d.id}`}>{d.oem}</Link>
+                    <div className="under">{cat(d.category)}</div>
+                  </td>
+                  <td className="wide-only"><Spec x={d} /></td>
+                  <td className="wide-only num">{d.score}</td>
+                  <td>{STAGE_LABEL[d.stage]}</td>
+                  <td className="num">{d.offer_price == null ? <span className="soft">None yet</span> : money(d.offer_price)}</td>
+                  <td className="wide-only num">{day(d.updated_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }
