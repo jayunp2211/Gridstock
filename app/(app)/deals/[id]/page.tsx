@@ -14,7 +14,8 @@ type D = {
   id: string; stage: string; buyer_nda_at: string | null; seller_nda_at: string | null; offer_price: number | null; fee_pct: string;
   offer_by: string | null; offer_accepted_at: string | null;
   score: number; gaps: Gap[]; request_id: string; buyer_id: string; seller_id: string;
-  category: string; oem: string; model: string | null; voltage_v: number; amps: number; kaic: number | null; enclosure: string | null;
+  category: string; oem: string; model: string | null; voltage_v: number; secondary_v: number | null; amps: number | null; capacity: number | null;
+  kaic: number | null; enclosure: string | null; configuration: string | null;
   condition: string; quantity: number; location_state: string; available_date: string; asking_price: number | null;
   warranty_status: string | null; notes: string | null; standard: string | null;
   buyer_name: string; buyer_company: string; seller_name: string; seller_company: string; need_by: string; site_state: string;
@@ -31,7 +32,7 @@ export default async function DealRoom({ params, searchParams }: { params: Promi
   const { offer: offerError } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const d = await one<D>(
-    `select d.*, m.score, m.gaps, m.request_id, r.buyer_id, l.seller_id, l.category, l.oem, l.model, l.voltage_v, l.amps, l.kaic,
+    `select d.*, m.score, m.gaps, m.request_id, r.buyer_id, l.seller_id, l.category, l.oem, l.model, l.voltage_v, l.secondary_v, l.amps, l.capacity, l.kaic, l.configuration,
             l.enclosure, l.condition, l.quantity, l.location_state, l.available_date, l.asking_price, l.warranty_status, l.notes, l.standard,
             b.name as buyer_name, b.company as buyer_company, s.name as seller_name, s.company as seller_company, r.need_by, r.site_state,
             r.quantity as need_qty, r.budget_max, row_to_json(r) as req, row_to_json(l) as lst
@@ -123,6 +124,7 @@ export default async function DealRoom({ params, searchParams }: { params: Promi
             <dt>Site</dt><dd>{d.site_state}, needed by {day(d.need_by)}</dd>
             <dt>Seller</dt><dd>{reveal || isSeller ? <>{d.seller_name}<div className="soft small">{d.seller_company}</div></> : hidden}</dd>
             <dt>Ships from</dt><dd>{d.location_state}, available {day(d.available_date)}</dd>
+            {d.configuration && <><dt>Configuration</dt><dd>{d.configuration}</dd></>}
           </dl>
           <Checks gaps={fit.gaps} />
         </section>

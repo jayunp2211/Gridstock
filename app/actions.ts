@@ -6,7 +6,7 @@ import { q, one, pool } from '@/lib/db';
 import { requireUser, SESSION, type User } from '@/lib/auth';
 import { syncListing, syncRequest } from '@/lib/matching';
 import { seedDemo } from '@/lib/demo';
-import { CATEGORIES, CONDITIONS, STAGES, STATES, units } from '@/lib/labels';
+import { capacityUnit, CATEGORIES, CONDITIONS, STAGES, STATES, units } from '@/lib/labels';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const num = (f: FormData, k: string) => {
@@ -54,12 +54,14 @@ export async function signIn(f: FormData) {
  */
 export async function requestAccess(f: FormData) {
   const role = str(f, 'role') === 'buyer' ? 'buyer' : 'seller';
-  const name = str(f, 'name'), email = str(f, 'email').toLowerCase(), company = str(f, 'company');
+  const name = str(f, 'name'), email = str(f, 'email').toLowerCase(), company = str(f, 'company'), note = str(f, 'note');
   if (str(f, 'website')) redirect('/login?requested=1'); // a field people never see; only scripts fill it
-  const ok = name.length >= 2 && short(name, 80) && company.length >= 2 && short(company, 120)
+  const ok = name.length >= 2 && short(name, 80) && company.length >= 2 && short(company, 120) && short(note, 1000)
     && short(email, 200) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !email.endsWith('.test');
   if (!ok) redirect(`/login?role=${role}&error=access`);
-  await q(`insert into users (email, name, company, role) values ($1,$2,$3,$4) on conflict (email) do nothing`, [email, name, company, role]);
+  // A second request from the same address changes nothing: anyone can type someone else's address here.
+  await q(`insert into users (email, name, company, role, note) values ($1,$2,$3,$4,$5) on conflict (email) do nothing`,
+    [email, name, company, role, note || null]);
   redirect('/login?requested=1');
 }
 
@@ -72,32 +74,41 @@ export async function signOut() {
 export async function createListing(f: FormData) {
   const u = await requireUser('seller');
   const v = {
-    category: str(f, 'category'), oem: str(f, 'oem'), model: str(f, 'model'), voltage: num(f, 'voltage_v'), amps: num(f, 'amps'),
-    kaic: num(f, 'kaic'), enclosure: str(f, 'enclosure'), standard: str(f, 'standard'), condition: str(f, 'condition'),
+    category: str(f, 'category'), oem: str(f, 'oem'), model: str(f, 'model'), voltage: num(f, 'voltage_v'), secondary: num(f, 'secondary_v'),
+    amps: num(f, 'amps'), capacity: num(f, 'capacity'), kaic: num(f, 'kaic'), enclosure: str(f, 'enclosure'), standard: str(f, 'standard'),
+    configuration: str(f, 'configuration'), condition: str(f, 'condition'),
     quantity: num(f, 'quantity') ?? 1, state: str(f, 'location_state').toUpperCase(), available: str(f, 'available_date'),
     price: num(f, 'asking_price'), warranty: str(f, 'warranty_status'), notes: str(f, 'notes'),
   };
+  // Which ratings apply follows from the category. The ones that do not apply are not stored, whatever was sent.
+  const sized = capacityUnit(v.category) != null, transformer = v.category === 'transformer';
   try {
     need(has(CATEGORIES, v.category), 'category');
     need(v.oem.length > 0 && short(v.oem, 40), 'oem');
     need(whole(v.voltage, 100, 800_000), 'voltage');
-    need(whole(v.amps, 1, 20_000), 'amps');
-    need(blankOr(v.kaic, 1, 250), 'kaic');
+    if (transformer) need(whole(v.secondary, 100, 800_000), 'secondary');
+    if (sized) need(whole(v.capacity, 1, 500_000), 'capacity');
+    else {
+      need(whole(v.amps, 1, 20_000), 'amps');
+      need(blankOr(v.kaic, 1, 250), 'kaic');
+    }
     need(has(CONDITIONS, v.condition), 'condition');
     need(whole(v.quantity, 1, 500), 'quantity');
     need(has(STATES, v.state), 'state');
     need(isDate(v.available), 'date');
     need(blankOr(v.price, 1, 2_000_000_000), 'price');
-    need(short(v.model, 60) && short(v.enclosure, 30) && short(v.standard, 30) && short(v.warranty, 120) && short(v.notes, 2000), 'text');
+    need(short(v.model, 60) && short(v.enclosure, 30) && short(v.standard, 30) && short(v.warranty, 120) && short(v.notes, 2000)
+      && short(v.configuration, 600), 'text');
   } catch (e) {
     if (e instanceof Invalid) redirect(`/listings/new?error=${e.field}`);
     throw e;
   }
   const row = await one<{ id: string }>(
-    `insert into listings (seller_id, category, oem, model, voltage_v, amps, kaic, enclosure, standard, condition,
-       quantity, location_state, available_date, asking_price, warranty_status, notes)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) returning id`,
-    [u.id, v.category, v.oem, v.model || null, v.voltage, v.amps, v.kaic, v.enclosure || null, v.standard || null, v.condition,
+    `insert into listings (seller_id, category, oem, model, voltage_v, secondary_v, amps, capacity, kaic, enclosure, standard, configuration,
+       condition, quantity, location_state, available_date, asking_price, warranty_status, notes)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) returning id`,
+    [u.id, v.category, v.oem, v.model || null, v.voltage, transformer ? v.secondary : null, sized ? null : v.amps, sized ? v.capacity : null,
+     sized ? null : v.kaic, v.enclosure || null, v.standard || null, v.configuration || null, v.condition,
      v.quantity, v.state, v.available, v.price, v.warranty || null, v.notes || null],
   );
   await syncListing(row!.id);
@@ -107,16 +118,22 @@ export async function createListing(f: FormData) {
 export async function createRequest(f: FormData) {
   const u = await requireUser('buyer');
   const v = {
-    category: str(f, 'category'), voltage: num(f, 'voltage_v'), amps: num(f, 'amps_min'), kaic: num(f, 'kaic_min'),
+    category: str(f, 'category'), voltage: num(f, 'voltage_v'), secondary: num(f, 'secondary_v'), amps: num(f, 'amps_min'),
+    capacity: num(f, 'capacity_min'), kaic: num(f, 'kaic_min'),
     enclosure: str(f, 'enclosure'), oems: list(f, 'acceptable_oems'), conditions: f.getAll('conditions_ok').map(String),
     quantity: num(f, 'quantity') ?? 1, state: str(f, 'site_state').toUpperCase(), needBy: str(f, 'need_by'),
     budget: num(f, 'budget_max'), notes: str(f, 'notes'),
   };
+  const sized = capacityUnit(v.category) != null, transformer = v.category === 'transformer';
   try {
     need(has(CATEGORIES, v.category), 'category');
     need(whole(v.voltage, 100, 800_000), 'voltage');
-    need(whole(v.amps, 1, 20_000), 'amps');
-    need(blankOr(v.kaic, 1, 250), 'kaic');
+    if (transformer) need(whole(v.secondary, 100, 800_000), 'secondary');
+    if (sized) need(whole(v.capacity, 1, 500_000), 'capacity');
+    else {
+      need(whole(v.amps, 1, 20_000), 'amps');
+      need(blankOr(v.kaic, 1, 250), 'kaic');
+    }
     need(v.conditions.length > 0 && v.conditions.every(c => has(CONDITIONS, c)), 'conditions_ok');
     need(whole(v.quantity, 1, 500), 'quantity');
     need(has(STATES, v.state), 'state');
@@ -129,11 +146,11 @@ export async function createRequest(f: FormData) {
     throw e;
   }
   const row = await one<{ id: string }>(
-    `insert into requests (buyer_id, category, voltage_v, amps_min, kaic_min, enclosure, acceptable_oems, conditions_ok,
+    `insert into requests (buyer_id, category, voltage_v, secondary_v, amps_min, capacity_min, kaic_min, enclosure, acceptable_oems, conditions_ok,
        quantity, site_state, need_by, budget_max, notes)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning id`,
-    [u.id, v.category, v.voltage, v.amps, v.kaic, v.enclosure || null, v.oems, v.conditions, v.quantity, v.state, v.needBy,
-     v.budget, v.notes || null],
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning id`,
+    [u.id, v.category, v.voltage, transformer ? v.secondary : null, sized ? null : v.amps, sized ? v.capacity : null, sized ? null : v.kaic,
+     v.enclosure || null, v.oems, v.conditions, v.quantity, v.state, v.needBy, v.budget, v.notes || null],
   );
   await syncRequest(row!.id);
   redirect(`/requests/${row!.id}`);

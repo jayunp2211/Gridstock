@@ -1,21 +1,12 @@
-import { CATEGORIES, CONDITIONS, label, units, volts } from '@/lib/labels';
+import { CATEGORIES, CONDITIONS, label, ratings, units, type Rated } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
 
-type SpecSource = {
-  voltage_v: number; amps?: number; amps_min?: number; kaic?: number | null; kaic_min?: number | null;
-  enclosure?: string | null; condition?: string; quantity?: number; standard?: string | null;
-};
+type SpecSource = Rated & { enclosure?: string | null; condition?: string; quantity?: number; standard?: string | null };
 
-const n = (v: number) => v.toLocaleString('en-US');
-
-/** Ratings as one readable line: 480 V · 4,000 A · 65 kAIC · NEMA 1 (or 13.8 kV for medium voltage) */
+/** Ratings as one readable line: 480 V · 4,000 A · 65 kAIC · NEMA 1, or 2,500 kVA · 13.8 kV to 480 V for a transformer. */
 /** `plain` drops the "or more" qualifier where a column header already says the rating is a minimum. */
 export function Spec({ x, full, plain }: { x: SpecSource; full?: boolean; plain?: boolean }) {
-  const amps = x.amps ?? x.amps_min ?? 0;
-  const kaic = x.kaic ?? x.kaic_min;
-  const min = x.amps_min != null && !plain;
-  const parts = [volts(x.voltage_v), `${n(amps)} A${min ? ' or more' : ''}`];
-  if (kaic) parts.push(`${kaic} kAIC${min ? ' or more' : ''}`);
+  const parts = ratings(x, plain);
   if (x.enclosure) parts.push(x.enclosure);
   if (full && x.standard) parts.push(x.standard);
   if (full && x.condition) parts.push(label(CONDITIONS, x.condition));

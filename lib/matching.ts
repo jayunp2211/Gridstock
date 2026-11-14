@@ -1,5 +1,5 @@
 import { q } from './db';
-import { CATEGORIES, label, volts } from './labels';
+import { noun, ratings, type Rated } from './labels';
 import { matchListing, MIN_SCORE, type Gap, type Listing, type Request } from './match';
 
 type Row = Record<string, unknown> & { id: string };
@@ -24,10 +24,10 @@ async function save(reqRow: Row, lstRow: Row) {
     [reqRow.id, lstRow.id, m.score, JSON.stringify(m.gaps)],
   );
   if (row?.is_new) {
-    const kind = label(CATEGORIES, String(lstRow.category)).toLowerCase();
+    const kind = noun(String(lstRow.category));
     await q(`insert into notifications (user_id, body, link) values ($1,$2,$3), ($4,$5,$6)`, [
       reqRow.buyer_id,
-      `New match (${m.score}/100): ${lstRow.oem} ${kind}, ${volts(Number(lstRow.voltage_v))} ${lstRow.amps} A`,
+      `New match (${m.score}/100): ${lstRow.oem} ${kind}, ${ratings(lstRow as unknown as Rated).slice(0, 2).join(', ')}`,
       `/requests/${reqRow.id}`,
       lstRow.seller_id,
       `A buyer needs gear like yours (${m.score}/100 fit): ${kind} for a site in ${reqRow.site_state}`,

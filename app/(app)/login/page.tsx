@@ -35,6 +35,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
           <label>Name<input name="name" required minLength={2} maxLength={80} autoComplete="name" /></label>
           <label>Work email<input name="email" type="email" required maxLength={200} autoComplete="email" /></label>
           <label>Company<input name="company" required minLength={2} maxLength={120} autoComplete="organization" /></label>
+          <label><span>What do you hold, or what do you need? <span className="hint">optional</span></span><textarea name="note" maxLength={1000} placeholder="Two 4,000 A switchgear lineups from a paused project, in crates in Texas." /></label>
           <label className="trap" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
           <div><button className="go">Request access<Arrow /></button></div>
         </form>

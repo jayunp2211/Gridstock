@@ -10,9 +10,9 @@ export const dynamic = 'force-dynamic';
 
 // The public boards show ratings and a coarse region only.
 // Seller, buyer, exact location, model, price and notes are never selected here.
-type Gear = { id: string; category: string; oem: string; voltage_v: number; amps: number; kaic: number | null;
+type Gear = { id: string; category: string; oem: string; voltage_v: number; secondary_v: number | null; amps: number | null; capacity: number | null; kaic: number | null;
   enclosure: string | null; condition: string; quantity: number; location_state: string; available_date: string };
-type Need = { id: string; category: string; voltage_v: number; amps_min: number; kaic_min: number | null;
+type Need = { id: string; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null; capacity_min: number | null; kaic_min: number | null;
   enclosure: string | null; quantity: number; site_state: string; need_by: string };
 
 /**
@@ -23,10 +23,10 @@ type Need = { id: string; category: string; voltage_v: number; amps_min: number;
 async function boards(): Promise<{ gear: Gear[]; needs: Need[]; sample: boolean }> {
   try {
     const [gear, needs] = await Promise.all([
-      q<Gear>(`select l.id, l.category, l.oem, l.voltage_v, l.amps, l.kaic, l.enclosure, l.condition, l.quantity, l.location_state, l.available_date
+      q<Gear>(`select l.id, l.category, l.oem, l.voltage_v, l.secondary_v, l.amps, l.capacity, l.kaic, l.enclosure, l.condition, l.quantity, l.location_state, l.available_date
                from listings l join users u on u.id = l.seller_id
                where l.status = 'active' and u.verified and u.email not like '%.test' order by l.available_date, l.created_at limit 8`),
-      q<Need>(`select r.id, r.category, r.voltage_v, r.amps_min, r.kaic_min, r.enclosure, r.quantity, r.site_state, r.need_by
+      q<Need>(`select r.id, r.category, r.voltage_v, r.secondary_v, r.amps_min, r.capacity_min, r.kaic_min, r.enclosure, r.quantity, r.site_state, r.need_by
                from requests r join users u on u.id = r.buyer_id
                where r.status = 'open' and u.verified and u.email not like '%.test' order by r.need_by, r.created_at limit 8`),
     ]);

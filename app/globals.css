@@ -150,6 +150,7 @@ body:has(main.app) .colophon { padding-bottom: 28px; }
 .fit small { display: block; font-stretch: 100%; font-weight: 400; font-size: 14px; letter-spacing: 0; line-height: 1.4; margin-top: 10px; color: var(--ink-2); }
 .match h3 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
 .match .spec { margin-top: 6px; }
+.match .config { margin-top: 8px; max-width: 46em; font-size: 16px; }
 .match .where { margin-top: 2px; color: var(--ink-2); font-size: 16px; }
 .checks { margin-top: 16px; display: grid; gap: 7px; font-size: 16px; }
 .checks li { display: flex; gap: 10px; align-items: flex-start; }

@@ -81,3 +81,82 @@ test('maker names are compared by family, and enclosure spelling is forgiven', (
   assert.ok(r.ok);
   assert.equal(r.score, 100);
 });
+
+test('a transformer is matched on kVA and on both voltages, and reaches a neighbouring primary only through its taps', () => {
+  const need: Request = {
+    category: 'transformer', voltage_v: 13_200, secondary_v: 480, capacity_min: 2500, amps_min: null, kaic_min: null, enclosure: null,
+    acceptable_oems: [], conditions_ok: ['new_crated'], quantity: 2, site_state: 'NC', need_by: '2027-03-01',
+  };
+  const unit: Listing = {
+    category: 'transformer', oem: 'Eaton', voltage_v: 13_800, secondary_v: 480, capacity: 2500, amps: null, kaic: null, enclosure: null,
+    condition: 'new_crated', quantity: 3, location_state: 'VA', available_date: '2027-01-15',
+  };
+  // 13.8 kV on a 13.2 kV system is 4.3% apart: inside the taps, flagged for a check.
+  const near = matchListing(need, unit);
+  assert.ok(near.ok);
+  assert.equal(near.score, 90);
+  assert.ok(near.gaps.some(g => g.severity === 'warn' && g.text.includes('tap')));
+  const exact = matchListing({ ...need, voltage_v: 13_800 }, unit);
+  assert.ok(exact.ok);
+  assert.equal(exact.score, 100);
+
+  // 12.47 kV is in the same 15 kV class, which is enough for switchgear and not for a transformer.
+  assert.equal(matchListing({ ...need, voltage_v: 12_470 }, unit).ok, false);
+  // The secondary has to be the right one, and so does the size.
+  assert.equal(matchListing({ ...need, secondary_v: 208 }, unit).ok, false);
+  assert.equal(matchListing(need, { ...unit, capacity: 2000 }).ok, false);
+
+  const vague = matchListing(need, { ...unit, voltage_v: 13_200, secondary_v: null, capacity: null });
+  assert.ok(vague.ok);
+  assert.equal(vague.score, 80);
+  const big = matchListing(need, { ...unit, voltage_v: 13_200, capacity: 5000 });
+  assert.ok(big.ok);
+  assert.equal(big.score, 95);
+  assert.ok(big.gaps.some(g => g.text.includes('5,000 kVA')));
+});
+
+test('cooling and UPS are sized by capacity and need their own supply voltage', () => {
+  const need: Request = {
+    category: 'cdu', voltage_v: 480, capacity_min: 1000, amps_min: null, kaic_min: null, enclosure: null,
+    acceptable_oems: [], conditions_ok: ['new_crated'], quantity: 4, site_state: 'OH', need_by: '2027-03-01',
+  };
+  const unit: Listing = {
+    category: 'cdu', oem: 'Vertiv', voltage_v: 480, capacity: 1350, amps: null, kaic: null, enclosure: null,
+    condition: 'new_crated', quantity: 8, location_state: 'OH', available_date: '2027-01-15',
+  };
+  const r = matchListing(need, unit);
+  assert.ok(r.ok);
+  assert.equal(r.score, 100);
+  assert.equal(matchListing(need, { ...unit, capacity: 800 }).ok, false);
+  // 600 V switchgear can serve a 480 V system. A 600 V pump skid cannot.
+  assert.equal(matchListing(need, { ...unit, voltage_v: 600 }).ok, false);
+  const util = matchListing(need, { ...unit, voltage_v: 460 });
+  assert.ok(util.ok);
+  assert.equal(util.score, 100);
+  // A generator is sized in kW and makes one voltage.
+  const genNeed = { ...need, category: 'generator', capacity_min: 2000 }, gen = { ...unit, category: 'generator', oem: 'Cummins', capacity: 2500 };
+  assert.equal(matchListing(genNeed, gen).ok, true);
+  assert.equal(matchListing(genNeed, { ...gen, voltage_v: 13_800 }).ok, false);
+  assert.equal(matchListing(genNeed, { ...gen, capacity: 1500 }).ok, false);
+  // Interrupting rating is not a property of this equipment, so asking for one changes nothing.
+  const withKaic = matchListing({ ...need, kaic_min: 65 }, unit);
+  assert.ok(withKaic.ok);
+  assert.equal(withKaic.score, 100);
+});
+
+test('rows saved before capacity was recorded still match on what they have', () => {
+  // The old form asked every category for amps. Such a request has no capacity to compare.
+  const oldNeed: Request = {
+    category: 'cdu', voltage_v: 480, amps_min: 50, kaic_min: null, enclosure: null,
+    acceptable_oems: [], conditions_ok: ['new_crated'], quantity: 4, site_state: 'OH', need_by: '2027-03-01',
+  };
+  const oldUnit: Listing = {
+    category: 'cdu', oem: 'Vertiv', voltage_v: 480, amps: 60, kaic: null, enclosure: null,
+    condition: 'new_crated', quantity: 8, location_state: 'IA', available_date: '2027-01-15',
+  };
+  const r = matchListing(oldNeed, oldUnit);
+  assert.ok(r.ok);
+  assert.equal(r.score, 100);
+  // A new listing, with a capacity and no current, still answers an old request.
+  assert.equal(matchListing(oldNeed, { ...oldUnit, amps: null, capacity: 1350 }).ok, true);
+});

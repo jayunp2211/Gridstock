@@ -22,8 +22,8 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     `select d.id, d.stage, d.offer_price, l.oem, l.category, b.company as buyer, s.company as seller, d.updated_at
      from deals d join matches m on m.id = d.match_id join listings l on l.id = m.listing_id join requests r on r.id = m.request_id
      join users b on b.id = r.buyer_id join users s on s.id = l.seller_id order by (d.stage = 'lost'), d.updated_at desc`);
-  const reqs = await q<{ id: string; category: string; voltage_v: number; amps_min: number; kaic_min: number | null; enclosure: string | null; need_by: string; company: string; matches: number; best: number | null }>(
-    `select r.id, r.category, r.voltage_v, r.amps_min, r.kaic_min, r.enclosure, r.need_by, u.company,
+  const reqs = await q<{ id: string; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null; capacity_min: number | null; kaic_min: number | null; enclosure: string | null; need_by: string; company: string; matches: number; best: number | null }>(
+    `select r.id, r.category, r.voltage_v, r.secondary_v, r.amps_min, r.capacity_min, r.kaic_min, r.enclosure, r.need_by, u.company,
             (select count(*)::int from matches m join listings l on l.id = m.listing_id where m.request_id = r.id and l.status = 'active') as matches,
             (select max(m.score) from matches m join listings l on l.id = m.listing_id where m.request_id = r.id and l.status = 'active') as best
      from requests r join users u on u.id = r.buyer_id where r.status = 'open' order by r.need_by`);

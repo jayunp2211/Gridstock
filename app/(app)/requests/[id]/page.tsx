@@ -10,11 +10,12 @@ import { Spec, Fit, Checks, Arrow, cat, day } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 
-type Req = { id: string; buyer_id: string; category: string; voltage_v: number; amps_min: number; kaic_min: number | null;
+type Req = { id: string; buyer_id: string; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null;
+  capacity_min: number | null; kaic_min: number | null;
   enclosure: string | null; acceptable_oems: string[]; quantity: number; site_state: string; need_by: string; status: string;
   budget_max: number | null };
-type M = { id: string; score: number; gaps: Gap[]; oem: string; model: string | null; voltage_v: number; amps: number;
-  kaic: number | null; enclosure: string | null; standard: string | null; condition: string; quantity: number; location_state: string;
+type M = { id: string; score: number; gaps: Gap[]; category: string; oem: string; model: string | null; voltage_v: number;
+  secondary_v: number | null; amps: number | null; capacity: number | null; kaic: number | null; configuration: string | null; enclosure: string | null; standard: string | null; condition: string; quantity: number; location_state: string;
   available_date: string; deal_id: string | null; deal_stage: string | null; seller_verified: boolean; listing_status: string };
 
 const TAKEN: Record<string, string> = { under_offer: 'Under offer with another buyer', sold: 'Sold' };
@@ -26,9 +27,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
   const r = await one<Req>('select * from requests where id = $1', [id]);
   if (!r || (r.buyer_id !== u.id && u.role !== 'admin')) notFound();
   await syncRequest(id);
-  // Buyers see specs only: no seller name, company or asking price before NDA.
+  // Buyers see ratings and the seller's own description of the configuration: no seller name, company or asking price before the NDA.
   const matches = await q<M>(
-    `select m.id, m.score, m.gaps, l.oem, l.model, l.voltage_v, l.amps, l.kaic, l.enclosure, l.standard, l.condition, l.quantity,
+    `select m.id, m.score, m.gaps, l.category, l.oem, l.model, l.voltage_v, l.secondary_v, l.amps, l.capacity, l.kaic, l.configuration,
+            l.enclosure, l.standard, l.condition, l.quantity,
             l.location_state, l.available_date, l.status as listing_status, d.id as deal_id, d.stage as deal_stage, s.verified as seller_verified
      from matches m join listings l on l.id = m.listing_id join users s on s.id = l.seller_id
      left join deals d on d.match_id = m.id
@@ -69,6 +71,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ id: 
             <div>
               <h3>{m.oem} {m.model ?? ''}</h3>
               <Spec x={m} full />
+              {m.configuration && <p className="config">{m.configuration}</p>}
               <p className="where">
                 Ships from {m.location_state}, available {day(m.available_date)}.
                 {m.seller_verified ? ' Seller verified by Gridstock.' : ''}
