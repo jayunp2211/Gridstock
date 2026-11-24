@@ -1,6 +1,7 @@
 // Prototype session: a signed-in user id in a cookie.
 // Only the sample accounts (addresses ending in .test) can hold a session, because they are the
 // only ones that can be entered without proof of identity. Real accounts wait for email sign-in.
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { one } from './db';
@@ -14,11 +15,15 @@ export const SESSION = {
   httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 12, secure: process.env.NODE_ENV === 'production',
 } as const;
 
-export async function currentUser(): Promise<User | null> {
+/**
+ * The signed-in user. The layout and the page both ask on every request, so the answer is kept for the
+ * rest of that request (React `cache`) and the database is asked once.
+ */
+export const currentUser = cache(async (): Promise<User | null> => {
   const id = (await cookies()).get('uid')?.value;
   if (!id || !/^[0-9a-f-]{36}$/.test(id)) return null;
   return one<User>(`select u.* from users u where u.id = $1 and ${IS_SAMPLE}`, [id]);
-}
+});
 
 export async function requireUser(role?: User['role']): Promise<User> {
   const u = await currentUser();
