@@ -9,6 +9,8 @@ import { filled, taken } from '@/lib/units';
 import { requestIntro, setRequestStatus } from '@/app/actions';
 import { Spec, Fit, Checks, Arrow, cat, day } from '@/components/ui';
 
+export const metadata = { title: 'Request' };
+
 export const dynamic = 'force-dynamic';
 
 type Req = { id: string; buyer_id: string; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null;

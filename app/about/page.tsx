@@ -4,7 +4,8 @@ import { FEE_PCT, NETA, OPERATOR } from '@/lib/site';
 import { Arrow } from '@/components/ui';
 
 export const metadata = {
-  title: 'About Gridstock',
+  title: { absolute: 'About Gridstock' },
+  alternates: { canonical: '/about' },
   description: 'Who runs Gridstock, what it does in a deal, what it leaves to the buyer and the seller, and how to reach it.',
 };
 
@@ -27,7 +28,7 @@ const ERRORS: Record<string, string> = {
 export default async function About({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string }> }) {
   const { sent, error } = await searchParams;
   return (
-    <main className="about">
+    <main className="about" id="main">
       <section className="frame hero">
         <h1>Who you are dealing with</h1>
         <div className="hero-foot">

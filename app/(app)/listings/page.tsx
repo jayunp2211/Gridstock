@@ -6,6 +6,8 @@ import { syncListing } from '@/lib/matching';
 import { taken } from '@/lib/units';
 import { Spec, State, Arrow, cat, day } from '@/components/ui';
 
+export const metadata = { title: 'My listings' };
+
 export const dynamic = 'force-dynamic';
 
 type Row = {

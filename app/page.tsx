@@ -8,6 +8,7 @@ import { filled, taken } from '@/lib/units';
 import { Spec, Arrow, cat, month } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
+export const metadata = { alternates: { canonical: '/' } };
 
 // The public boards show ratings and a coarse region only.
 // Seller, buyer, exact location, model, price and notes are never selected here.
@@ -58,7 +59,7 @@ export default async function Home() {
   const sell = u?.role === 'seller' ? '/listings/new' : '/login?role=seller';
 
   return (
-    <main>
+    <main id="main">
       <section className="frame hero">
         <h1 className="display">The switchgear you need is sitting in a crate.</h1>
         <div className="hero-foot">

@@ -6,6 +6,8 @@ import { BOOKS_TZ, earnings, monthName, type Closing, type Total } from '@/lib/e
 import { resetDemo, verifyUser } from '@/app/actions';
 import { Spec, cat, day } from '@/components/ui';
 
+export const metadata = { title: 'Operations' };
+
 export const dynamic = 'force-dynamic';
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {

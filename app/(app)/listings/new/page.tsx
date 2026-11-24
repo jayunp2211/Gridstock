@@ -5,6 +5,8 @@ import { createListing } from '@/app/actions';
 import { Arrow } from '@/components/ui';
 import { ListingSpec } from '@/components/spec-fields';
 
+export const metadata = { title: 'List gear' };
+
 export default async function NewListing({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   await requireUser('seller');
   const { error } = await searchParams;

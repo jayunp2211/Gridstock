@@ -5,6 +5,8 @@ import { createRequest } from '@/app/actions';
 import { Arrow } from '@/components/ui';
 import { RequestSpec } from '@/components/spec-fields';
 
+export const metadata = { title: 'Post a need' };
+
 export default async function NewRequest({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   await requireUser('buyer');
   const { error } = await searchParams;

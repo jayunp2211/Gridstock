@@ -3,6 +3,8 @@ import { fieldError } from '@/lib/labels';
 import { requestAccess, signIn } from '@/app/actions';
 import { Arrow } from '@/components/ui';
 
+export const metadata = { title: { absolute: 'Join Gridstock' } };
+
 export const dynamic = 'force-dynamic';
 
 const GROUPS: [string, string][] = [['buyer', 'Buyers'], ['seller', 'Sellers'], ['admin', 'Operations']];

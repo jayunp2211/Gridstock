@@ -1,7 +1,12 @@
 import { agreement, NDA_DRAFT_NOTE, NDA_SUMMARY, NDA_VERSION } from '@/lib/nda';
 import { AgreementText } from '@/components/agreement';
 
-export const metadata = { title: 'The Gridstock NDA' };
+export const metadata = {
+  title: { absolute: 'The Gridstock NDA' },
+  description: 'The mutual NDA with non-circumvention that a buyer and a seller accept on Gridstock before names and prices are shown.',
+  alternates: { canonical: '/nda' },
+  robots: { index: true, follow: true },
+};
 
 /** The agreement behind the "Accept NDA" button, public so that anyone can read it before they join. */
 export default async function Nda({ searchParams }: { searchParams: Promise<{ version?: string }> }) {

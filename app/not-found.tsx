@@ -3,7 +3,7 @@ import { Arrow } from '@/components/ui';
 
 export default function NotFound() {
   return (
-    <main className="app">
+    <main className="app" id="main">
       <div className="head">
         <div>
           <h1>Nothing here</h1>

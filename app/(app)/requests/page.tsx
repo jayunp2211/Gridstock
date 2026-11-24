@@ -5,6 +5,8 @@ import { syncRequest } from '@/lib/matching';
 import { filled } from '@/lib/units';
 import { Spec, State, Arrow, cat, day } from '@/components/ui';
 
+export const metadata = { title: 'My requests' };
+
 export const dynamic = 'force-dynamic';
 
 type Row = { id: string; category: string; voltage_v: number; secondary_v: number | null; amps_min: number | null; capacity_min: number | null;
