@@ -5,6 +5,8 @@ import { STAGE_LABEL, money } from '@/lib/labels';
 import { ndaAccepted } from '@/lib/nda';
 import { Spec, cat, day } from '@/components/ui';
 
+export const metadata = { title: 'Deals' };
+
 export const dynamic = 'force-dynamic';
 
 type D = { id: string; stage: string; offer_price: number | null; offer_by: string | null; buyer_nda_at: string | null;

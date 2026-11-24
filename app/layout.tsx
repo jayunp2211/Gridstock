@@ -9,7 +9,7 @@ const title = 'Gridstock. Surplus switchgear, breakers and cooling for data cent
 const description = 'A private market for new and never-energized electrical and cooling equipment from paused data center projects, matched to your spec and energization date.';
 export const metadata = {
   metadataBase: new URL('https://gridstock.netlify.app'),
-  title,
+  title: { default: title, template: '%s · Gridstock' },
   description,
   openGraph: { title, description, siteName: 'Gridstock', type: 'website', url: '/' },
 };
@@ -20,6 +20,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body>
+        <a href="#main" className="skip">Skip to content</a>
         <header className="frame nav">
           <Link href="/" className="wordmark">Gridstock</Link>
           <nav aria-label="Main">

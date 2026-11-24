@@ -3,6 +3,8 @@ import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { day } from '@/components/ui';
 
+export const metadata = { title: 'Inbox' };
+
 export const dynamic = 'force-dynamic';
 
 export default async function Inbox() {

@@ -9,6 +9,8 @@ import { filled, sold, taken } from '@/lib/units';
 import { proposeIntro, setListingStatus } from '@/app/actions';
 import { Spec, Fit, Checks, State, Arrow, cat, day } from '@/components/ui';
 
+export const metadata = { title: 'Listing' };
+
 export const dynamic = 'force-dynamic';
 
 type L = { id: string; seller_id: string; category: string; oem: string; model: string | null; voltage_v: number; secondary_v: number | null;

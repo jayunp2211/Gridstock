@@ -1,0 +1,39 @@
+# Runs on every pull request and on main: types, unit tests, the migrations on a fresh Postgres, the seed, and a production build.
+name: Check
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gs
+          POSTGRES_PASSWORD: gs
+          POSTGRES_DB: gridstock
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U gs" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://gs:gs@localhost:5432/gridstock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      # Twice, because every migration must be safe to run again.
+      - run: npm run db:migrate && npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run build

@@ -15,6 +15,8 @@ import { AgreementText } from '@/components/agreement';
 import { Documents } from './documents';
 import { Steps, hasSteps, type StepDeal } from './steps';
 
+export const metadata = { title: 'Deal room' };
+
 export const dynamic = 'force-dynamic';
 
 type D = StepDeal & {
@@ -178,7 +180,7 @@ export default async function DealRoom({ params, searchParams }: { params: Promi
       {!ndaDone && d.stage !== 'lost' && (
         <section className="panel nda" id="nda">
           <div>
-            <h3>{nda.title}</h3>
+            <h2 className="panel-title">{nda.title}</h2>
             <p>Names, the asking price and the seller&rsquo;s notes are revealed once both sides accept. In short, each side agrees to this:</p>
             <ul className="points">{NDA_SUMMARY.map(s => <li key={s}>{s}</li>)}</ul>
             <details className="fold">
@@ -296,7 +298,7 @@ export default async function DealRoom({ params, searchParams }: { params: Promi
 
       {isAdmin && (
         <section className="panel ops">
-          <h3>Operations: move this deal to another stage</h3>
+          <h2 className="panel-title">Operations: move this deal to another stage</h2>
           <p className="soft">The two sides move a deal forward themselves. Use this to put right a step that was recorded by mistake, or to end a deal.</p>
           <form action={setStage} className="inline">
             <input type="hidden" name="deal_id" value={d.id} />

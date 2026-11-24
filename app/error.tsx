@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function Failed({ reset }: { error: Error; reset: () => void }) {
   return (
-    <main className="app">
+    <main className="app" id="main">
       <div className="head">
         <div>
           <h1>That did not work</h1>

@@ -43,6 +43,8 @@ npm run dev
 npm test             # unit tests for matching, units, files and earnings
 ```
 
+Every pull request runs `.github/workflows/check.yml`: types, unit tests, every migration twice on a fresh Postgres, the seed, and a production build.
+
 Sign in at `/login` with a demo account, such as the buyer "Alex Chen", the seller "Dana Ruiz", or "Ops Team".
 
 ## Not done yet
