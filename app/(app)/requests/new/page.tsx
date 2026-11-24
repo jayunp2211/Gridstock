@@ -32,7 +32,7 @@ export default async function NewRequest({ searchParams }: { searchParams: Promi
           <label><span>Notes <span className="hint">project context, utility requirements</span></span><textarea name="notes" maxLength={2000} /></label>
           <p className="soft small">Your budget and notes are never shown to sellers, and budget plays no part in the fit score.</p>
         </fieldset>
-        <div><button className="go">Find matches<Arrow /></button></div>
+        <div><button className="go">Find matches</button></div>
       </form>
     </>
   );

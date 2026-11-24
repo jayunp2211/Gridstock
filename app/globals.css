@@ -145,8 +145,7 @@ body:has(main.app) .colophon { padding-bottom: 28px; }
 .app h2:first-child { margin-top: 0; }
 .spec { font-size: 16px; }
 .spec span { display: inline-block; white-space: nowrap; }
-.spec span:not(:last-child)::after { content: '·'; margin: 0 0.36em; color: var(--ink-2); }
-.on-ink .spec span::after { color: #a9b3ab; }
+.spec span:not(:last-child) { margin-right: 0.6em; }
 .state { font-size: 15px; white-space: nowrap; }
 .state.live { color: var(--ok); font-weight: 600; }
 .notice { background: var(--ink); color: var(--ground); padding: 14px 18px; margin-bottom: 28px; }
@@ -191,7 +190,7 @@ body:has(main.app) .colophon { padding-bottom: 28px; }
 .offer { margin-top: 20px; }
 .accept { margin-top: 20px; }
 .accept + .offer { margin-top: 8px; }
-.accept button { width: 100%; justify-content: space-between; }
+.accept button { width: 100%; justify-content: center; }
 .offer-error { margin: 20px 0 0; }
 .offer-next { margin-top: 18px; max-width: 34em; }
 .facts .state { margin-top: 2px; }

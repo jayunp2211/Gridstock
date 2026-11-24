@@ -203,7 +203,7 @@ export default async function DealRoom({ params, searchParams }: { params: Promi
                 <div className="choices long">
                   <label><input type="checkbox" name="agree" value="yes" required />I have read the agreement, and I can accept it for {u.company}.</label>
                 </div>
-                <div><button className="go">Accept NDA<Arrow /></button></div>
+                <div><button className="go">Accept NDA</button></div>
               </form>
             )}
           </div>
@@ -276,7 +276,7 @@ export default async function DealRoom({ params, searchParams }: { params: Promi
             <form action={acceptOffer} className="accept">
               <input type="hidden" name="deal_id" value={d.id} />
               <input type="hidden" name="offer_price" value={d.offer_price!} />
-              <button className="go">Accept {money(d.offer_price)} for {units(qty)}<Arrow /></button>
+              <button className="go">Accept {money(d.offer_price)} for {units(qty)}</button>
             </form>
           )}
           {party && negotiable && (

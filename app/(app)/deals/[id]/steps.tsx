@@ -1,7 +1,7 @@
 import { appointInspector, confirmEscrow, fundEscrow, recordInspection, releaseEscrow } from '@/app/actions';
 import { money } from '@/lib/labels';
 import { NETA } from '@/lib/site';
-import { Arrow, day } from '@/components/ui';
+import { day } from '@/components/ui';
 
 export type StepDeal = {
   id: string; stage: string; offer_price: number | null;
@@ -61,7 +61,7 @@ export function Steps({ d, side, fee, error }: { d: StepDeal; side: 'buyer' | 's
             </div>
           </div>
           <label><span>Note for the seller <span className="hint">optional</span></span><input name="note" maxLength={300} /></label>
-          <div><button className="go">Record result<Arrow /></button></div>
+          <div><button className="go">Record result</button></div>
         </form>
         <p className="soft small">
           Accepting the equipment moves the deal to escrow. If it did not pass, the agreed price is set aside and the units are open
@@ -90,7 +90,7 @@ export function Steps({ d, side, fee, error }: { d: StepDeal; side: 'buyer' | 's
           <form action={fundEscrow} className="step-form single">
             {id}
             <label>Escrow agent<input name="escrow_agent" minLength={2} maxLength={120} required /></label>
-            <button className="go">Record the deposit<Arrow /></button>
+            <button className="go">Record the deposit</button>
           </form>
         </>
       ) : (
@@ -110,7 +110,7 @@ export function Steps({ d, side, fee, error }: { d: StepDeal; side: 'buyer' | 's
             The buyer reports {price} deposited with {agent}. Check with {agent} directly that it holds the funds and what releases
             them. Confirm here only once you have, because this is your signal to ship.
           </p>
-          <form action={confirmEscrow}>{id}<button className="go">Confirm the funds are held<Arrow /></button></form>
+          <form action={confirmEscrow}>{id}<button className="go">Confirm the funds are held</button></form>
         </>
       ) : (
         <>
@@ -126,7 +126,7 @@ export function Steps({ d, side, fee, error }: { d: StepDeal; side: 'buyer' | 's
             When the equipment has arrived and you have told {agent} to release the funds to the seller, confirm it here.
             That closes the deal, and it cannot be undone from this page.
           </p>
-          <form action={releaseEscrow}>{id}<button className="go">Confirm delivery and release<Arrow /></button></form>
+          <form action={releaseEscrow}>{id}<button className="go">Confirm delivery and release</button></form>
         </>
       ) : (
         <>

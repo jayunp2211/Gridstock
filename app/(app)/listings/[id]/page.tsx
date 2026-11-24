@@ -108,9 +108,9 @@ export default async function ListingDetail({ params, searchParams }: { params: 
               <Checks gaps={m.gaps} />
             </div>
             <div className="act">
-              {m.deal_id ? <Link href={`/deals/${m.deal_id}`} className="btn line">{m.deal_stage === 'lost' ? 'See ended deal' : 'Open deal room'}<Arrow /></Link>
+              {m.deal_id ? <Link href={`/deals/${m.deal_id}`} className="btn line">{m.deal_stage === 'lost' ? 'See ended deal' : 'Open deal room'}</Link>
                 : l.status === 'active' && m.request_status === 'open' && l.seller_id === u.id
-                  ? <form action={proposeIntro}><input type="hidden" name="match_id" value={m.id} /><button className="go">Propose intro<Arrow /></button></form>
+                  ? <form action={proposeIntro}><input type="hidden" name="match_id" value={m.id} /><button className="go">Propose intro</button></form>
                   : null}
             </div>
           </article>

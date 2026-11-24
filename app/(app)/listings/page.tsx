@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/labels';
 import { syncListing } from '@/lib/matching';
 import { taken } from '@/lib/units';
-import { Spec, State, Arrow, cat, day } from '@/components/ui';
+import { Spec, State, cat, day } from '@/components/ui';
 
 export const metadata = { title: 'My listings' };
 
@@ -33,7 +33,7 @@ export default async function Listings() {
           <h1>My listings</h1>
           <p>Buyers see the ratings, never your company or project, until both sides sign the NDA. Open a listing to see who needs it.</p>
         </div>
-        <Link href="/listings/new" className="btn go">List gear<Arrow /></Link>
+        <Link href="/listings/new" className="btn go">List gear</Link>
       </div>
       {rows.length === 0 ? (
         <p className="blank">No listings yet. List your first lineup to see which builders need it.</p>
