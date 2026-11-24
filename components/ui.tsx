@@ -1,9 +1,11 @@
+import { Fragment } from 'react';
 import { CATEGORIES, CONDITIONS, label, ratings, units, type Rated } from '@/lib/labels';
 import type { Gap } from '@/lib/match';
 
 type SpecSource = Rated & { enclosure?: string | null; condition?: string; quantity?: number; standard?: string | null };
 
-/** Ratings as one readable line: 480 V · 4,000 A · 65 kAIC · NEMA 1, or 2,500 kVA · 13.8 kV to 480 V for a transformer. */
+/** Ratings as one line, spaced like a nameplate: 480 V  4,000 A  65 kAIC  NEMA 1, or 2,500 kVA  13.8 kV to 480 V for a transformer. */
+/** A plain space sits between the parts so a screen reader or a copied line keeps them apart. */
 /** `plain` drops the "or more" qualifier where a column header already says the rating is a minimum. */
 export function Spec({ x, full, plain }: { x: SpecSource; full?: boolean; plain?: boolean }) {
   const parts = ratings(x, plain);
@@ -11,7 +13,7 @@ export function Spec({ x, full, plain }: { x: SpecSource; full?: boolean; plain?
   if (full && x.standard) parts.push(x.standard);
   if (full && x.condition) parts.push(label(CONDITIONS, x.condition));
   if (full && x.quantity != null) parts.push(units(x.quantity));
-  return <div className="spec num" style={{ whiteSpace: 'normal' }}>{parts.map(p => <span key={p}>{p}</span>)}</div>;
+  return <div className="spec num" style={{ whiteSpace: 'normal' }}>{parts.map((p, i) => <Fragment key={p}>{i > 0 && ' '}<span>{p}</span></Fragment>)}</div>;
 }
 
 export function Fit({ value }: { value: number }) {

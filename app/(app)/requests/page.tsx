@@ -3,7 +3,7 @@ import { q } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { syncRequest } from '@/lib/matching';
 import { filled } from '@/lib/units';
-import { Spec, State, Arrow, cat, day } from '@/components/ui';
+import { Spec, State, cat, day } from '@/components/ui';
 
 export const metadata = { title: 'My requests' };
 
@@ -29,7 +29,7 @@ export default async function Requests() {
           <h1>My requests</h1>
           <p>Each request is matched against every active listing, and again whenever new gear is listed.</p>
         </div>
-        <Link href="/requests/new" className="btn go">Post a need<Arrow /></Link>
+        <Link href="/requests/new" className="btn go">Post a need</Link>
       </div>
       {rows.length === 0 ? (
         <p className="blank">No requests yet. Post the spec you need to see what is available now.</p>

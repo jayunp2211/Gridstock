@@ -5,7 +5,7 @@ import { CONDITIONS, label } from '@/lib/labels';
 import { regionOf } from '@/lib/match';
 import { sampleListings, sampleRequests } from '@/lib/demo';
 import { filled, taken } from '@/lib/units';
-import { Spec, Arrow, cat, month } from '@/components/ui';
+import { Spec, cat, month } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { alternates: { canonical: '/' } };
@@ -68,10 +68,10 @@ export default async function Home() {
             data center projects, matched to your spec and your energization date.
           </p>
           <div className="actions">
-            {u?.role === 'buyer' ? <><Link href="/requests/new" className="btn go">Post a need<Arrow /></Link><Link href="/requests" className="u">My requests</Link></>
-              : u?.role === 'seller' ? <><Link href="/listings/new" className="btn go">List gear<Arrow /></Link><Link href="/listings" className="u">My listings</Link></>
-              : u ? <Link href="/admin" className="btn go">Open operations<Arrow /></Link>
-              : <><Link href="/login" className="btn go">Request access<Arrow /></Link><Link href="/login#demo" className="u">Try the demo</Link></>}
+            {u?.role === 'buyer' ? <><Link href="/requests/new" className="btn go">Post a need</Link><Link href="/requests" className="u">My requests</Link></>
+              : u?.role === 'seller' ? <><Link href="/listings/new" className="btn go">List gear</Link><Link href="/listings" className="u">My listings</Link></>
+              : u ? <Link href="/admin" className="btn go">Open operations</Link>
+              : <><Link href="/login" className="btn go">Request access</Link><Link href="/login#demo" className="u">Try the demo</Link></>}
           </div>
         </div>
       </section>
@@ -140,7 +140,7 @@ export default async function Home() {
                   ? 'What a builder posts: a spec, a site and the date they must energize. If you hold gear like this, tell us what you have, even if it is not an exact fit.'
                   : 'Builders with a utility date and no gear. If you hold something close to one of these, it is worth listing even if it is not an exact fit.'}
               </p>
-              <Link href={sell} className="btn line">{u?.role === 'seller' ? 'List gear you hold' : 'I hold gear like this'}<Arrow /></Link>
+              <Link href={sell} className="btn line">{u?.role === 'seller' ? 'List gear you hold' : 'I hold gear like this'}</Link>
             </div>
             <div className="scroll">
               <table className="data">
@@ -189,10 +189,10 @@ export default async function Home() {
         <h2 className="ask">Holding gear from a paused project, or racing a utility date?</h2>
         <div>
           <div className="actions">
-            {u?.role === 'buyer' ? <Link href="/requests/new" className="btn go">Post a need<Arrow /></Link>
-              : u?.role === 'seller' ? <Link href="/listings/new" className="btn go">List gear<Arrow /></Link>
-              : u ? <Link href="/admin" className="btn go">Open operations<Arrow /></Link>
-              : <><Link href="/login?role=buyer" className="btn go">I need gear<Arrow /></Link><Link href="/login?role=seller" className="btn line">I hold gear</Link></>}
+            {u?.role === 'buyer' ? <Link href="/requests/new" className="btn go">Post a need</Link>
+              : u?.role === 'seller' ? <Link href="/listings/new" className="btn go">List gear</Link>
+              : u ? <Link href="/admin" className="btn go">Open operations</Link>
+              : <><Link href="/login?role=buyer" className="btn go">I need gear</Link><Link href="/login?role=seller" className="btn line">I hold gear</Link></>}
           </div>
           <p className="soft small">Free to list and to post a need. The buyer pays a success fee only when a deal closes.</p>
         </div>

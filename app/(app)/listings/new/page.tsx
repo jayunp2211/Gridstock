@@ -38,7 +38,7 @@ export default async function NewListing({ searchParams }: { searchParams: Promi
           </div>
           <label><span>Notes <span className="hint">storage conditions, documents on hand</span></span><textarea name="notes" maxLength={2000} /></label>
         </fieldset>
-        <div><button className="go">Save and match<Arrow /></button></div>
+        <div><button className="go">Save and match</button></div>
       </form>
     </>
   );

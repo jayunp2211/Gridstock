@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { sendContact } from '@/app/actions';
 import { FEE_PCT, NETA, OPERATOR } from '@/lib/site';
-import { Arrow } from '@/components/ui';
 
 export const metadata = {
   title: { absolute: 'About Gridstock' },
@@ -94,7 +93,7 @@ export default async function About({ searchParams }: { searchParams: Promise<{ 
             <label><span>Company <span className="hint">optional</span></span><input name="company" maxLength={120} autoComplete="organization" /></label>
             <label>Message<textarea name="body" required minLength={10} maxLength={4000} /></label>
             <label className="trap" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-            <div><button className="go">Send message<Arrow /></button></div>
+            <div><button className="go">Send message</button></div>
           </form>
         </div>
       </section>
